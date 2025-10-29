@@ -1,0 +1,53 @@
+# ===============
+# Virtual Environments
+# Must be ignored. They contain libraries and are platform-specific.
+# ===============
+/venv/
+/.venv/
+/env/
+/.env/
+/virtual/
+/Virtual/
+
+# ===============
+# Python Cache & Artifacts
+# Compiled Python files and cache directories.
+# ===============
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# ===============
+# IDE & Editor Configuration
+# User-specific settings for IDEs like VS Code, PyCharm.
+# ===============
+.vscode/
+.idea/
+
+# ===============
+# Local Configuration & Secrets
+# Never commit secrets, API keys, or local environment variables.
+# ===============
+.env
+.env.local
+
+# ===============
+# Logs & Temporary Files
+# Runtime logs or temporary files.
+# ===============
+*.log
+*.tmp
+
+# ===============
+# OS & System Files
+# System-generated files (e.g., macOS .DS_Store, Windows Thumbs.db).
+# ===============
+.DS_Store
+Thumbs.db
+
+# ===============
+# Data Version Control (DVC)
+# Ignore DVC's internal directory.
+# ===============
+.dvc/
