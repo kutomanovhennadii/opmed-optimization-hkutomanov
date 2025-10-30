@@ -7,4 +7,4 @@ For full setup and environment activation instructions, see
 
 After completing installation, you can activate the environment and run checks as described there.
 
-That’s all — this README intentionally contains only a minimal entry point.
+Thatâ€™s all â€” this README intentionally contains only a minimal entry point.
