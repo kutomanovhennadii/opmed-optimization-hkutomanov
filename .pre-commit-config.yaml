@@ -27,5 +27,16 @@
     rev: v1.11.2
     hooks:
       - id: mypy
-        additional_dependencies: []
-        args: ["--strict", "--ignore-missing-imports"]
+        pass_filenames: false
+        args:
+          - --strict
+          - --ignore-missing-imports
+          - --explicit-package-bases
+          - -p
+          - opmed          # проверяем пакет по имени, не папку src
+        additional_dependencies:
+          - pydantic
+          - pandas
+          - pyyaml
+          - matplotlib
+          - ortools

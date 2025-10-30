@@ -1,50 +1,42 @@
-[project]
-name = "opmed-optimization"
-version = "0.1.0"
-description = "Opmed optimization framework"
-authors = [
-    { name = "hkutomanov" }
+# --- Build system (для pip install -e .) ---
+[build-system]
+build-backend = "setuptools.build_meta"
+requires = ["setuptools>=68", "wheel"]
+
+[dependency-groups]
+dev = [
+  "toml-sort (>=0.24.3,<0.25.0)"
 ]
+
+[project]
+authors = [
+  {name = "hkutomanov"}
+]
+dependencies = [
+  "matplotlib~=3.10",
+  "ortools~=9.14",
+  "pandas~=2.3",
+  "pydantic~=2.5",
+  "pyyaml~=6.0"
+]
+description = "Opmed optimization framework"
 license = "MIT"
+name = "opmed-optimization"
 readme = "README.md"
 requires-python = ">=3.11"
-
-dependencies = [
-    "pydantic~=2.5",
-    "pandas~=2.3",
-    "pyyaml~=6.0",
-    "matplotlib~=3.10",
-    "ortools~=9.14",
-]
+version = "0.1.0"
 
 [project.optional-dependencies]
 dev = [
-    "ruff~=0.14",
-    "black~=25.9",
-    "mypy~=1.18",
-    "pytest~=8.0",
-    "pytest-cov~=7.0",
-    "pre-commit~=4.3",
-    "hypothesis~=6.142"
+  "black~=25.9",
+  "hypothesis~=6.142",
+  "mypy~=1.18",
+  "pre-commit~=4.3",
+  "pytest-cov~=7.0",
+  "pytest~=8.0",
+  "ruff~=0.14",
+  "toml-sort~=0.24.3"
 ]
-
-# --- Poetry metadata (чтобы не потерять совместимость) ---
-[tool.poetry]
-packages = [{ include = "opmed", from = "src" }]
-
-# --- src-layout для setuptools ---
-[tool.setuptools]
-package-dir = { "" = "src" }
-
-[tool.setuptools.packages.find]
-where = ["src"]
-
-# --- Конфигурации инструментов ---
-[tool.ruff]
-line-length = 100
-target-version = "py311"
-select = ["E", "F", "I", "UP"]
-ignore = ["E501"]
 
 [tool.black]
 line-length = 100
@@ -54,13 +46,33 @@ target-version = ["py311"]
 python_version = "3.11"
 strict = true
 ignore_missing_imports = true
+explicit_package_bases = true
+mypy_path = ["src"]                         # src в sys.path
 exclude = "(data/|docs/|schemas/|infra/|scripts/)"
+
+
+# --- Poetry metadata (чтобы не потерять совместимость) ---
+[tool.poetry]
+packages = [{from = "src", include = "opmed"}]
+[tool.pytest]
 
 [tool.pytest.ini_options]
 addopts = "-q --cov=opmed --cov-report=term-missing"
 testpaths = ["tests"]
 
-# --- Build system (для pip install -e .) ---
-[build-system]
-requires = ["setuptools>=68", "wheel"]
-build-backend = "setuptools.build_meta"
+# --- Конфигурации инструментов ---
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP"]
+ignore = ["E501"]
+
+
+# --- src-layout для setuptools ---
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]

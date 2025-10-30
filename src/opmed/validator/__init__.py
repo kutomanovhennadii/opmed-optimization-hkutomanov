@@ -1,2 +1,1 @@
 # Package initializer for validator
-

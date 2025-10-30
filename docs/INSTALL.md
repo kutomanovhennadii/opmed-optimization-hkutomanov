@@ -1,4 +1,4 @@
-# Setup & Installation
+﻿# Setup & Installation
 
 
 ## Requirements
@@ -21,7 +21,7 @@
    py -3.11 -m poetry install
 
 4. Activate local environment and ensure Poetry is on PATH:
-   .\scripts\activate.ps1
+   .\activate.ps1
 
 5. (Optional) Enable Git hooks:
    poetry run pre-commit install
@@ -31,7 +31,16 @@
    poetry run mypy src/opmed
    poetry run pytest -q
 
-7. CLI placeholders:
+7. (Optional) Install `make` for running project targets:
+   - **PowerShell as Administrator** → run:
+     ```powershell
+     choco install make -y
+     ```
+     If Chocolatey reports a lock-file or permission error, remove
+     `C:\ProgramData\chocolatey\lib\make` and retry.
+   - Alternative (non-admin): open **Git Bash** and use built-in `make`.
+
+8. CLI placeholders:
    poetry run python scripts\run.py --help
    poetry run python scripts\tune.py --help
 
@@ -49,7 +58,7 @@
    poetry install
 
 4. Activate helper (prints how to run commands via Poetry):
-   .\scripts\activate.sh
+   .\activate.sh
 
 5. (Optional) Enable Git hooks:
    poetry run pre-commit install
@@ -59,7 +68,13 @@
    poetry run mypy src/opmed
    poetry run pytest -q
 
-7. CLI placeholders:
+7. (Optional) Install `make` if missing:
+   ```bash
+   sudo apt install make        # Ubuntu/Debian
+   sudo dnf install make        # Fedora
+   brew install make            # macOS (Homebrew)
+
+8. CLI placeholders:
    poetry run python scripts/run.py --help
    poetry run python scripts/tune.py --help
 

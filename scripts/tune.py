@@ -7,9 +7,7 @@ import argparse
 
 
 def main():
-    parser = argparse.ArgumentParser(
-        description="Run Opmed optimization pipeline (placeholder)."
-    )
+    parser = argparse.ArgumentParser(description="Run Opmed optimization pipeline (placeholder).")
     parser.add_argument(
         "--config", type=str, default="configs/config.yaml", help="Path to config file."
     )
@@ -19,9 +17,7 @@ def main():
         default="data/input/surgeries.csv",
         help="Path to surgeries input file.",
     )
-    parser.add_argument(
-        "--outdir", type=str, default="data/output", help="Output directory."
-    )
+    parser.add_argument("--outdir", type=str, default="data/output", help="Output directory.")
 
     args = parser.parse_args()
     print("run placeholder")
