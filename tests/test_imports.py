@@ -5,4 +5,3 @@ def test_imports():
 
     # проверяем, что модули реально загрузились
     assert all([opmed, opmed.dataloader, opmed.solver_core])
-
