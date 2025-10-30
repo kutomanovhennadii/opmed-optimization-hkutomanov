@@ -29,4 +29,3 @@
       - id: mypy
         additional_dependencies: []
         args: ["--strict", "--ignore-missing-imports"]
-
