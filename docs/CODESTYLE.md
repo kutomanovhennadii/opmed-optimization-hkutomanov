@@ -80,9 +80,9 @@ Choose one style per file and remain consistent.
 
 | Element | Style | Example |
 |----------|--------|----------|
-| Modules / packages | `snake_case` | `data_loader`, `solver_core` |
+| Modules | packages | `snake_case` | `data_loader`, `solver_core` |
 | Classes | `PascalCase` | `SurgeryValidator` |
-| Functions / methods | `snake_case` | `build_model()` |
+| Functions | methods | `snake_case` | `build_model()` |
 | Constants | `UPPER_CASE` | `TIME_UNIT` |
 | Private helpers | `_leading_underscore` | `_compute_overlap()` |
 
