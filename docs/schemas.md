@@ -2,7 +2,7 @@
 
 
 
-This document defines the canonical data structures used by the Opmed optimization system.  
+This document defines the canonical data structures used by the Opmed optimization system.
 
 All modules must conform to these schemas for data serialization, validation, and reproducibility.
 
@@ -236,9 +236,9 @@ These conversion rules ensure deterministic rounding and reproducible time reaso
 
 \## 5. Schema Versioning
 
-\- Schema changes must be versioned via git and documented in ADRs.  
+\- Schema changes must be versioned via git and documented in ADRs.
 
-\- Backward compatibility for input/output is mandatory within one major release.  
+\- Backward compatibility for input/output is mandatory within one major release.
 
 \- Validation errors must raise ConfigError or DataError according to ADR-008.
 
@@ -249,4 +249,3 @@ These conversion rules ensure deterministic rounding and reproducible time reaso
 
 
 End of file.
-

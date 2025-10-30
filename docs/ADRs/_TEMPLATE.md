@@ -4,9 +4,9 @@
 
 \## 🧩 Context
 
-Describe the background and motivation for this decision.  
+Describe the background and motivation for this decision.
 
-Which problem, requirement, or limitation prompted the need for this ADR?  
+Which problem, requirement, or limitation prompted the need for this ADR?
 
 Reference any related Epic or task (e.g., \*Epic 3 → 3.1.2\*).
 
@@ -14,7 +14,7 @@ Reference any related Epic or task (e.g., \*Epic 3 → 3.1.2\*).
 
 \## 💡 Decision
 
-State clearly what decision was made.  
+State clearly what decision was made.
 
 Include implementation details, chosen tools, formats, or conventions.
 
@@ -59,6 +59,3 @@ Explain the effects of this decision on:
 
 
 \*All ADRs must remain in English for international collaboration. Each should be self-contained and reference related documents when necessary.\*
-
-
-

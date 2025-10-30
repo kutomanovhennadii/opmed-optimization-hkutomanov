@@ -4,7 +4,7 @@
 
 \## 🧩 Context
 
-The Opmed optimization system solves the anesthesiologist and operating room allocation problem — a hybrid of \*\*temporal scheduling\*\* and \*\*resource assignment\*\* with mixed logical and linear constraints.  
+The Opmed optimization system solves the anesthesiologist and operating room allocation problem — a hybrid of \*\*temporal scheduling\*\* and \*\*resource assignment\*\* with mixed logical and linear constraints.
 
 The solver must:
 
@@ -18,7 +18,7 @@ The solver must:
 
 
 
-During Epic 2 (Theoretical Model.md), the model was formulated with Boolean assignment variables and interval constraints.  
+During Epic 2 (Theoretical Model.md), the model was formulated with Boolean assignment variables and interval constraints.
 
 The architectural decision is now required to confirm the computational engine to be used for implementation and future MLOps orchestration.
 
@@ -30,7 +30,7 @@ The architectural decision is now required to confirm the computational engine t
 
 \## 💡 Decision
 
-Use \*\*Google OR-Tools CP-SAT\*\* as the primary solver for all optimization modules.  
+Use \*\*Google OR-Tools CP-SAT\*\* as the primary solver for all optimization modules.
 
 CP-SAT (Constraint Programming + SAT hybrid) provides:
 
@@ -46,7 +46,7 @@ CP-SAT (Constraint Programming + SAT hybrid) provides:
 
 
 
-All model construction functions (`ModelBuilder`, `Optimizer`) will map directly to CP-SAT’s Python API.  
+All model construction functions (`ModelBuilder`, `Optimizer`) will map directly to CP-SAT’s Python API.
 
 Alternative solvers may only be added later as research extensions (e.g., MILP back-end for benchmarking).
 
@@ -62,7 +62,7 @@ Alternative solvers may only be added later as research extensions (e.g., MILP b
 
 \### 1. MILP (Mixed-Integer Linear Programming)
 
-\*\*Pros:\*\* mature solvers (Gurobi, CPLEX), strong optimality proofs.  
+\*\*Pros:\*\* mature solvers (Gurobi, CPLEX), strong optimality proofs.
 
 \*\*Cons:\*\* requires explicit time discretization → combinatorial explosion; poor handling of interval and Boolean logic; expensive commercial licensing.
 
@@ -70,7 +70,7 @@ Alternative solvers may only be added later as research extensions (e.g., MILP b
 
 \### 2. Classical CP (Constraint Programming without SAT)
 
-\*\*Pros:\*\* elegant propagation; expressive modeling.  
+\*\*Pros:\*\* elegant propagation; expressive modeling.
 
 \*\*Cons:\*\* lacks hybrid Boolean reasoning and linear cost handling; weaker scalability for mixed integer objectives.
 
@@ -78,7 +78,7 @@ Alternative solvers may only be added later as research extensions (e.g., MILP b
 
 \### 3. SMT (Satisfiability Modulo Theories)
 
-\*\*Pros:\*\* flexible symbolic reasoning.  
+\*\*Pros:\*\* flexible symbolic reasoning.
 
 \*\*Cons:\*\* poor numeric optimization support; not optimized for scheduling or piecewise costs; fragile performance for large datasets.
 
@@ -135,6 +135,3 @@ Potential risk: migration to other solvers would require re-encoding interval lo
 
 
 \*This decision establishes CP-SAT as the formal computation core of the Opmed optimization framework.\*
-
-
-

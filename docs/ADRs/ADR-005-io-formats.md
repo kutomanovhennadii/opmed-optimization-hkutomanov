@@ -1,6 +1,6 @@
 \## Context
 
-The Opmed optimization workflow depends on well-defined and reproducible data exchange between modules.  
+The Opmed optimization workflow depends on well-defined and reproducible data exchange between modules.
 
 All processing starts with input surgeries.csv and ends with output solution.csv, both serving as standardized artifacts for validation, visualization, and further analytics.
 
@@ -114,25 +114,25 @@ File encoding: UTF-8, separator: comma (,)
 
 \## Alternatives
 
-1\. JSON or Parquet input files  
+1\. JSON or Parquet input files
 
-&nbsp;  Pros: type safety and hierarchical structure.  
+&nbsp;  Pros: type safety and hierarchical structure.
 
 &nbsp;  Cons: less readable, harder for manual inspection.
 
 
 
-2\. Excel (.xlsx)  
+2\. Excel (.xlsx)
 
-&nbsp;  Pros: easy for non-technical users.  
+&nbsp;  Pros: easy for non-technical users.
 
 &nbsp;  Cons: inconsistent parsing, poor version control, binary format not ideal for Git.
 
 
 
-3\. TSV (tab-separated)  
+3\. TSV (tab-separated)
 
-&nbsp;  Pros: simpler for some locales.  
+&nbsp;  Pros: simpler for some locales.
 
 &nbsp;  Cons: no major advantage over CSV, less compatible with standard tooling.
 
@@ -171,6 +171,3 @@ Related Tasks: Epic 3 -> 3.1.6, T1.1.8 (Problem Formulation Summary), T1.1.5 (Lo
 
 
 This decision standardizes the input/output CSV formats, ensuring reproducible and validated data exchange across all stages of the Opmed optimization pipeline.
-
-
-

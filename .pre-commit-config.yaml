@@ -13,6 +13,7 @@
     rev: 24.10.0
     hooks:
       - id: black
+        additional_dependencies: [click]
         language_version: python3.11
 
   # --- Ruff: линтер и автофикс ---

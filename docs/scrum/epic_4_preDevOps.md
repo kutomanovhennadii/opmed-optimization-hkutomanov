@@ -2,9 +2,9 @@
 
 
 
-Goal: reproducible builds and automatic checks “out of the box”.  
+Goal: reproducible builds and automatic checks “out of the box”.
 
-Epic artifacts: pyproject.toml, Makefile, .pre-commit-config.yaml, .github/workflows/{lint.yml, tests.yml}, minimal code stubs in src/opmed, base schemas in schemas/.  
+Epic artifacts: pyproject.toml, Makefile, .pre-commit-config.yaml, .github/workflows/{lint.yml, tests.yml}, minimal code stubs in src/opmed, base schemas in schemas/.
 
 Definition of Done (DoD): make lint \&\& make test are green locally and in CI; dependency versions are pinned.
 
@@ -18,13 +18,13 @@ Definition of Done (DoD): make lint \&\& make test are green locally and in CI; 
 
 Place code here:
 
-src/opmed/{dataloader, solver\_core, validator, visualizer, metrics, \_\_init\_\_.py}  
+src/opmed/{dataloader, solver\_core, validator, visualizer, metrics, \_\_init\_\_.py}
 
 Inside each — \_\_init\_\_.py + an empty module (loader.py, model\_builder.py, optimizer.py, validator.py, plot.py, metrics.py, logger.py) with docstrings.
 
 
 
-Add root folders if missing:  
+Add root folders if missing:
 
 tests/, scripts/, data/{input, output}, .github/workflows/
 
@@ -36,7 +36,7 @@ Criterion: python -c "import opmed; import opmed.solver\_core" does not fail.
 
 \### 4.1.2 — Minimal stubs and entry points
 
-scripts/run.py (argparse, for now print("run placeholder"))  
+scripts/run.py (argparse, for now print("run placeholder"))
 
 scripts/tune.py (argparse, for now print("tune placeholder"))
 
@@ -72,11 +72,11 @@ Required sections:
 
 
 
-\[build-system] → setuptools>=68, wheel  
+\[build-system] → setuptools>=68, wheel
 
-\[project] → name="opmed", version="0.1.0", requires-python=">=3.11", readme="README.md"  
+\[project] → name="opmed", version="0.1.0", requires-python=">=3.11", readme="README.md"
 
-dependencies: pydantic, pyyaml, pandas, matplotlib, ortools  
+dependencies: pydantic, pyyaml, pandas, matplotlib, ortools
 
 \[project.optional-dependencies].dev: ruff, black, mypy, pytest, pytest-cov, pre-commit, hypothesis
 
@@ -86,11 +86,11 @@ src-layout:
 
 
 
-\[tool.setuptools]  
+\[tool.setuptools]
 
-package-dir = {"" = "src"}  
+package-dir = {"" = "src"}
 
-\[tool.setuptools.packages.find]  
+\[tool.setuptools.packages.find]
 
 where = \["src"]
 
@@ -140,7 +140,7 @@ Criterion: pytest is green.
 
 \### 4.3.1 — Pre-commit configuration
 
-.pre-commit-config.yaml with hooks: black, ruff (with --fix), mypy, plus standard ones (trailing-whitespace, end-of-file-fixer, check-yaml, check-toml).  
+.pre-commit-config.yaml with hooks: black, ruff (with --fix), mypy, plus standard ones (trailing-whitespace, end-of-file-fixer, check-yaml, check-toml).
 
 Execute: pre-commit install
 
@@ -180,7 +180,7 @@ Criterion: file exists and is consistent with linters.
 
 \### 4.4.1 — Lint workflow: .github/workflows/lint.yml
 
-Steps: checkout, setup-python 3.11, cache pip (hashFiles('pyproject.toml')), install -e .\[dev], run ruff, black --check, mypy src/opmed.  
+Steps: checkout, setup-python 3.11, cache pip (hashFiles('pyproject.toml')), install -e .\[dev], run ruff, black --check, mypy src/opmed.
 
 Criterion: workflow green on PR/main.
 
@@ -188,7 +188,7 @@ Criterion: workflow green on PR/main.
 
 \### 4.4.2 — Tests workflow: .github/workflows/tests.yml
 
-Steps: checkout, setup-python 3.11, cache pip, install, run pytest -q, upload coverage/junit artifacts (optional).  
+Steps: checkout, setup-python 3.11, cache pip, install, run pytest -q, upload coverage/junit artifacts (optional).
 
 Criterion: tests pass, artifacts (coverage/junit) optionally uploaded.
 
@@ -200,9 +200,9 @@ In pyproject add:
 
 
 
-\[tool.pytest.ini\_options]  
+\[tool.pytest.ini\_options]
 
-addopts = "-q --cov=opmed --cov-report=term-missing"  
+addopts = "-q --cov=opmed --cov-report=term-missing"
 
 testpaths = \["tests"]
 
@@ -218,7 +218,7 @@ Criterion: CI fast (<2–3 min), can exclude -m slow if necessary.
 
 \### 4.5.1 — Create Makefile with targets setup, lint, test, run, tune, clean
 
-PYTHON ?= python  
+PYTHON ?= python
 
 PKG = src/opmed
 
@@ -228,57 +228,57 @@ PKG = src/opmed
 
 
 
-setup:  
+setup:
 
-&nbsp;	$(PYTHON) -m pip install --upgrade pip  
+&nbsp;	$(PYTHON) -m pip install --upgrade pip
 
-&nbsp;	$(PYTHON) -m pip install -e .\[dev]  
+&nbsp;	$(PYTHON) -m pip install -e .\[dev]
 
 &nbsp;	pre-commit install
 
 
 
-lint:  
+lint:
 
-&nbsp;	ruff check .  
+&nbsp;	ruff check .
 
-&nbsp;	black --check .  
+&nbsp;	black --check .
 
 &nbsp;	mypy $(PKG)
 
 
 
-test:  
+test:
 
 &nbsp;	pytest
 
 
 
-run:  
+run:
 
-&nbsp;	$(PYTHON) scripts/run.py \\  
+&nbsp;	$(PYTHON) scripts/run.py \\
 
-&nbsp;		--config configs/config.yaml \\  
+&nbsp;		--config configs/config.yaml \\
 
-&nbsp;		--surgeries data/input/surgeries.csv \\  
+&nbsp;		--surgeries data/input/surgeries.csv \\
 
 &nbsp;		--outdir data/output
 
 
 
-tune:  
+tune:
 
-&nbsp;	$(PYTHON) scripts/tune.py \\  
+&nbsp;	$(PYTHON) scripts/tune.py \\
 
-&nbsp;		--config configs/config.yaml \\  
+&nbsp;		--config configs/config.yaml \\
 
-&nbsp;		--grid configs/tune\_grid.yaml \\  
+&nbsp;		--grid configs/tune\_grid.yaml \\
 
 &nbsp;		--outdir data/output/tune
 
 
 
-clean:  
+clean:
 
 &nbsp;	rm -rf .pytest\_cache .mypy\_cache .ruff\_cache .coverage
 
@@ -294,7 +294,7 @@ Folder configs/ (repo root):
 
 
 
-config.yaml — keys from theory (ROOMS\_MAX, SHIFT\_MIN/MAX, …, solver params, TIME\_UNIT)  
+config.yaml — keys from theory (ROOMS\_MAX, SHIFT\_MIN/MAX, …, solver params, TIME\_UNIT)
 
 tune\_grid.yaml — grid for num\_workers, time\_limit, search\_branching
 
@@ -310,13 +310,12 @@ Criterion: yamllint in pre-commit passes (check-yaml hook).
 
 \### 4.6.1 — Generation of Pydantic schemas
 
-Define Pydantic models Surgery, Config, SolutionRow (stubs ok).  
+Define Pydantic models Surgery, Config, SolutionRow (stubs ok).
 
-Script scripts/gen\_schemas.py: export model.model\_json\_schema() → schemas/{surgery.schema.json, config.schema.json, solution.schema.json}.  
+Script scripts/gen\_schemas.py: export model.model\_json\_schema() → schemas/{surgery.schema.json, config.schema.json, solution.schema.json}.
 
 Add make target schemas (optional).
 
 
 
 Criterion: schema files generated and valid JSON.
-

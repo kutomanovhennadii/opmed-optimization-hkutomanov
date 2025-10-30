@@ -36,7 +36,7 @@ Each ADR documents \*why\* a particular choice was made, \*what alternatives\* w
 
 
 
-> New ADRs must follow the `\_TEMPLATE.md` format.  
+> New ADRs must follow the `\_TEMPLATE.md` format.
 
 > File names use the pattern `ADR-###-short-title.md`.
 
@@ -53,8 +53,3 @@ Each ADR documents \*why\* a particular choice was made, \*what alternatives\* w
 \- All ADRs reference related documents (Epics, T-tasks, or code modules).
 
 \- When code changes require a new architectural assumption, create a new ADR instead of editing old ones.
-
-
-
-
-

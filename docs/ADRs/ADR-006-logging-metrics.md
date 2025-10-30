@@ -110,25 +110,25 @@ validation\_report.json
 
 ## Alternatives
 
-1\. \*\*Plain text logs only\*\*  
+1\. \*\*Plain text logs only\*\*
 
-&nbsp;  Pros: simplest to implement.  
+&nbsp;  Pros: simplest to implement.
 
 &nbsp;  Cons: hard to parse, not machine-readable.
 
 
 
-2\. \*\*Database storage (e.g., SQLite)\*\*  
+2\. \*\*Database storage (e.g., SQLite)\*\*
 
-&nbsp;  Pros: queryable history.  
+&nbsp;  Pros: queryable history.
 
 &nbsp;  Cons: adds complexity, not ideal for portable runs.
 
 
 
-3\. \*\*CSV metrics\*\*  
+3\. \*\*CSV metrics\*\*
 
-&nbsp;  Pros: lightweight.  
+&nbsp;  Pros: lightweight.
 
 &nbsp;  Cons: poor extensibility for nested metadata.
 
@@ -169,6 +169,3 @@ Related Tasks: Epic 3 -> 3.1.7, T1.1.5 (Logical Scheme), T2.3.5 (Theoretical Mod
 
 
 This decision defines JSONL and metrics.json as the official logging and metrics standards for the Opmed optimization framework, ensuring consistent traceability and integration with MLOps tools.
-
-
-

@@ -135,6 +135,3 @@ Related Tasks: Epic 3 -> 3.1.9, T1.1.5 (Logical Scheme), T2.3.5 (Theoretical Mod
 
 
 This decision defines the unified error handling and validation strategy for all Opmed components, ensuring reliability, clarity, and consistent failure management across the optimization pipeline.
-
-
-

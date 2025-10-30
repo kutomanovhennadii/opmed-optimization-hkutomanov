@@ -169,6 +169,3 @@ Related Tasks: Epic 3 -> 3.1.5, T1.1.5 (Logical Scheme), T2.3.5 (Theoretical Mod
 This decision defines YAML + Pydantic as the unified configuration management standard for all Opmed modules, ensuring consistent validation and reproducible solver behavior.
 
 "@ | Out-File -Encoding ascii "C:\\Repository\\opmed-optimization\\ADRs\\ADR-004-configuration-management.md"
-
-
-

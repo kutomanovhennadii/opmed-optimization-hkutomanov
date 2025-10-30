@@ -129,16 +129,3 @@ Related Tasks: Epic 3 -> 3.1.8, T1.1.5 (Logical Scheme), T2.3.5 (Theoretical Mod
 This decision establishes deterministic reproducibility as a core quality principle of the Opmed optimization framework, enforced through seed fixation, dependency versioning, and data hashing.
 
 "@ | Out-File -Encoding ascii "C:\\Repository\\opmed-optimization\\ADRs\\ADR-007-reproducibility.md"
-
-
-
-
-
-
-
-
-
-
-
-
-

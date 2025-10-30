@@ -8,7 +8,7 @@ The optimization model relies on temporal reasoning: surgeries have fixed start 
 
 
 
-Floating-point arithmetic can introduce rounding drift and break constraint propagation, especially in cumulative sums or when comparing adjacent intervals.  
+Floating-point arithmetic can introduce rounding drift and break constraint propagation, especially in cumulative sums or when comparing adjacent intervals.
 
 A uniform integer-tick time scale is therefore required for reproducible constraint solving and validation.
 
@@ -44,9 +44,9 @@ Thus:
 
 All arithmetic on durations, buffers, and shift limits will use integer ticks:
 
-SHIFT\_MIN = 5h = 60 ticks  
+SHIFT\_MIN = 5h = 60 ticks
 
-SHIFT\_MAX = 12h = 144 ticks  
+SHIFT\_MAX = 12h = 144 ticks
 
 BUFFER = 0.25h = 3 ticks
 
@@ -56,25 +56,25 @@ BUFFER = 0.25h = 3 ticks
 
 
 
-1\. Continuous (float) time  
+1\. Continuous (float) time
 
-Pros: simpler for quick prototypes.  
+Pros: simpler for quick prototypes.
 
 Cons: floating-point drift, infeasibility under tight equality, inconsistent rounding between Python and OR-Tools.
 
 
 
-2\. Coarser discretization (15 min)  
+2\. Coarser discretization (15 min)
 
-Pros: faster solving.  
+Pros: faster solving.
 
 Cons: reduced precision, may misplace short surgeries and buffers.
 
 
 
-3\. Finer discretization (1 min)  
+3\. Finer discretization (1 min)
 
-Pros: more precise.  
+Pros: more precise.
 
 Cons: combinatorial blow-up; 12x more variables and clauses.
 
@@ -86,13 +86,13 @@ The 5-minute resolution offers the best balance between accuracy, solver perform
 
 \## Consequences
 
-\- Determinism: all times are integer, reproducible across runs and systems.  
+\- Determinism: all times are integer, reproducible across runs and systems.
 
-\- Performance: model size remains manageable (<= 288 ticks/day).  
+\- Performance: model size remains manageable (<= 288 ticks/day).
 
-\- Validation: direct integer comparison avoids floating errors.  
+\- Validation: direct integer comparison avoids floating errors.
 
-\- Conversion Layer: DataLoader and Validator must implement bidirectional conversions (to\_ticks, to\_datetime).  
+\- Conversion Layer: DataLoader and Validator must implement bidirectional conversions (to\_ticks, to\_datetime).
 
 \- Config Control: TIME\_UNIT retained in config.yaml but defaulted to 5 minutes.
 
@@ -104,17 +104,14 @@ Risk: extreme rounding (e.g., 2.5-minute surgeries) may introduce ±Δt quantiza
 
 \## Status
 
-Status: Accepted  
+Status: Accepted
 
-Date: 2025-10-30  
+Date: 2025-10-30
 
-Authors: Algorithm Research Team  
+Authors: Algorithm Research Team
 
 Related Tasks: Epic 3 -> 3.1.3, T1.1.5 (Logical Scheme), T2.3.5 (Theoretical Model.md)
 
 
 
 This decision standardizes the internal temporal representation and guarantees reproducible scheduling and validation across all Opmed modules.
-
-
-

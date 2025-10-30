@@ -49,4 +49,3 @@ C:\\Repository\\opmed-optimization\\
 │           ├── schemas.md
 
 │           └── Epic\_3\_plan.md
-

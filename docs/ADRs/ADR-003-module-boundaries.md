@@ -114,25 +114,25 @@ The entire execution chain is orchestrated by run.py (to be defined later).
 
 \## Alternatives
 
-1\. Flat monolithic structure  
+1\. Flat monolithic structure
 
-&nbsp;  Pros: simple for prototypes.  
+&nbsp;  Pros: simple for prototypes.
 
 &nbsp;  Cons: poor modularity, difficult testing, low reusability.
 
 
 
-2\. Multi-repo architecture (each module separate repo)  
+2\. Multi-repo architecture (each module separate repo)
 
-&nbsp;  Pros: strict isolation.  
+&nbsp;  Pros: strict isolation.
 
 &nbsp;  Cons: heavy management overhead, unnecessary complexity for a single solver pipeline.
 
 
 
-3\. Plugin-style dynamic imports  
+3\. Plugin-style dynamic imports
 
-&nbsp;  Pros: extensible.  
+&nbsp;  Pros: extensible.
 
 &nbsp;  Cons: overkill for stable, fixed pipeline.
 
@@ -144,13 +144,13 @@ The proposed structure is a balanced monorepo layout supporting modular imports,
 
 \## Consequences
 
-\- Modular boundaries are now fixed; each component can be tested independently.  
+\- Modular boundaries are now fixed; each component can be tested independently.
 
-\- Simplified orchestration: clear data flow from input to output.  
+\- Simplified orchestration: clear data flow from input to output.
 
-\- Future extensions (multi-day, stochastic) can be implemented by adding subpackages under solver\_core/ or optimizer/.  
+\- Future extensions (multi-day, stochastic) can be implemented by adding subpackages under solver\_core/ or optimizer/.
 
-\- Enables static type checking (mypy) and API documentation generation.  
+\- Enables static type checking (mypy) and API documentation generation.
 
 \- Encourages reproducibility through isolated I/O per module.
 
@@ -162,11 +162,11 @@ Risk: slight overhead for smaller experimental scripts, but outweighed by archit
 
 \## Status
 
-Status: Accepted  
+Status: Accepted
 
-Date: 2025-10-30  
+Date: 2025-10-30
 
-Authors: Algorithm Research Team  
+Authors: Algorithm Research Team
 
 Related Tasks: Epic 3 -> 3.1.4, T1.1.5 (Logical Scheme), T2.3.5 (Theoretical Model.md)
 
@@ -175,6 +175,3 @@ Related Tasks: Epic 3 -> 3.1.4, T1.1.5 (Logical Scheme), T2.3.5 (Theoretical Mod
 This decision formalizes the Opmed Python package structure and establishes clear module boundaries to ensure scalable, maintainable development.
 
 "@ | Out-File -Encoding ascii "C:\\Repository\\opmed-optimization\\ADRs\\ADR-003-module-boundaries.md"
-
-
-

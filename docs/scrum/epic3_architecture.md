@@ -4,7 +4,7 @@
 
 \## 1. Goal
 
-To finalize the \*\*architecture and interfaces\*\* of the Opmed optimization system so that development proceeds rapidly and consistently, with no redesign required.  
+To finalize the \*\*architecture and interfaces\*\* of the Opmed optimization system so that development proceeds rapidly and consistently, with no redesign required.
 
 All components — from data loading to solver orchestration — must be formally defined and traceable to \*\*T1.1.5 (Logical Interaction Scheme)\*\* and \*\*Theoretical\_Model.md\*\*.
 
@@ -16,13 +16,13 @@ All components — from data loading to solver orchestration — must be formall
 
 \## 2. Artifacts
 
-\- \*\*ARCHITECTURE.md\*\* — main system architecture document.  
+\- \*\*ARCHITECTURE.md\*\* — main system architecture document.
 
-\- \*\*docs/schemas.md\*\* — data and interface schemas.  
+\- \*\*docs/schemas.md\*\* — data and interface schemas.
 
-\- \*\*ADRs/\*\* — Architectural Decision Records (global repository in project root).  
+\- \*\*ADRs/\*\* — Architectural Decision Records (global repository in project root).
 
-\- \*\*/docs/diagrams/\*\* — system diagrams (context, container, dataflow, sequence).  
+\- \*\*/docs/diagrams/\*\* — system diagrams (context, container, dataflow, sequence).
 
 
 
@@ -32,11 +32,11 @@ All components — from data loading to solver orchestration — must be formall
 
 \## 3. Global Definition of Done (DoD)
 
-\- Architecture is fully aligned with theoretical model and solver logic.  
+\- Architecture is fully aligned with theoretical model and solver logic.
 
-\- All module interfaces are fixed, typed, and validated.  
+\- All module interfaces are fixed, typed, and validated.
 
-\- No undefined or “grey” zones remain in module boundaries.  
+\- No undefined or “grey” zones remain in module boundaries.
 
 \- The structure supports reproducibility, logging, validation, and future extensions.
 
@@ -54,29 +54,29 @@ All components — from data loading to solver orchestration — must be formall
 
 
 
-\*\*3.1.1 — Initialize ADR Registry and Template\*\*  
+\*\*3.1.1 — Initialize ADR Registry and Template\*\*
 
-Create `/ADRs/` folder at repository root, add `\_TEMPLATE.md` and `README.md`.  
+Create `/ADRs/` folder at repository root, add `\_TEMPLATE.md` and `README.md`.
 
 Each ADR includes: \*\*Context, Decision, Alternatives, Consequences, Status\*\*.
 
 
 
-\*\*3.1.2 — ADR-001: Solver Choice (CP-SAT vs MILP/CP/SMT)\*\*  
+\*\*3.1.2 — ADR-001: Solver Choice (CP-SAT vs MILP/CP/SMT)\*\*
 
-Formal justification for choosing CP-SAT to handle interval constraints, Boolean logic, and piecewise-linear costs.  
+Formal justification for choosing CP-SAT to handle interval constraints, Boolean logic, and piecewise-linear costs.
 
 Reject MILP (time discretization overhead), classical CP (no hybrid logic), and SMT (scalability issues).
 
 
 
-\*\*3.1.3 — ADR-002: Time Representation (Δt = 5 min, integer scale)\*\*  
+\*\*3.1.3 — ADR-002: Time Representation (Δt = 5 min, integer scale)\*\*
 
 Adopt TIME\_UNIT = 5 minutes, store timestamps as integer ticks, define I/O conversion formulas, and ensure rounding errors ≤ 1%.
 
 
 
-\*\*3.1.4 — ADR-003: Module Boundaries and Directory Structure\*\*  
+\*\*3.1.4 — ADR-003: Module Boundaries and Directory Structure\*\*
 
 Fix Python package layout:
 
@@ -102,35 +102,35 @@ Include a draft container diagram and table of module responsibilities.
 
 
 
-\*\*3.1.5 — ADR-004: Configuration Management (YAML + Pydantic)\*\*  
+\*\*3.1.5 — ADR-004: Configuration Management (YAML + Pydantic)\*\*
 
 Define structure of `config.yaml`, required and optional keys, Pydantic models for validation, and default values for all solver parameters.
 
 
 
-\*\*3.1.6 — ADR-005: Data Formats (surgeries.csv, solution.csv)\*\*  
+\*\*3.1.6 — ADR-005: Data Formats (surgeries.csv, solution.csv)\*\*
 
-Specify columns, data types, time zones, and null-value handling.  
+Specify columns, data types, time zones, and null-value handling.
 
 Provide two format tables and examples of valid rows.
 
 
 
-\*\*3.1.7 — ADR-006: Logging and Metrics (JSONL + metrics.json)\*\*  
+\*\*3.1.7 — ADR-006: Logging and Metrics (JSONL + metrics.json)\*\*
 
 Describe solver log structure: seed, OR-Tools version, parameters, and output metrics schema (`metrics.json`).
 
 
 
-\*\*3.1.8 — ADR-007: Reproducibility (seed, versions, determinism)\*\*  
+\*\*3.1.8 — ADR-007: Reproducibility (seed, versions, determinism)\*\*
 
 Define policy for seed fixation, dependency pinning, dataset hash logging, and reproducibility checklist.
 
 
 
-\*\*3.1.9 — ADR-008: Error Handling and Input Validation\*\*  
+\*\*3.1.9 — ADR-008: Error Handling and Input Validation\*\*
 
-List error classes: `InputError`, `ConfigError`, `ModelBuildError`, `SolveError`.  
+List error classes: `InputError`, `ConfigError`, `ModelBuildError`, `SolveError`.
 
 Provide mapping: error type → source → message → action.
 
@@ -144,9 +144,9 @@ Provide mapping: error type → source → message → action.
 
 
 
-\*\*3.2.1 — Data Schemas (Pydantic):\*\*  
+\*\*3.2.1 — Data Schemas (Pydantic):\*\*
 
-Define models `Surgery`, `Config`, and `SolutionRow`.  
+Define models `Surgery`, `Config`, and `SolutionRow`.
 
 All fields from theoretical formulation are fixed with explicit TZ/Δt conversion rules.
 
@@ -283,8 +283,3 @@ Task: new keys in config.yaml (disabled by default). Criterion: keys and default
 3.4.5 — Risk/complexity assessment
 
 Task: short table of impact on complexity/time. Criterion: implementation priority defined (after Epics 7–10).
-
-
-
-
-
