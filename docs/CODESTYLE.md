@@ -1,17 +1,17 @@
 ﻿# Opmed Code Style Guide
 
-This document defines the coding conventions used in the Opmed Optimization project.  
+This document defines the coding conventions used in the Opmed Optimization project.
 It complements automated linters (black, ruff, mypy) and explains *why* we follow these rules.
 
 ---
 
 ## 1. General Principles
 
-- Code must be readable, consistent, and reproducible.  
-- All Python files use **UTF-8**, **LF** line endings, and **4 spaces** for indentation.  
-- **Maximum line length:** 100 characters.  
-- Use **double quotes** for strings ("text") except when a single quote makes escaping cleaner.  
-- Avoid wildcard imports (from x import *).  
+- Code must be readable, consistent, and reproducible.
+- All Python files use **UTF-8**, **LF** line endings, and **4 spaces** for indentation.
+- **Maximum line length:** 100 characters.
+- Use **double quotes** for strings ("text") except when a single quote makes escaping cleaner.
+- Avoid wildcard imports (from x import *).
 - Each public module must include a module-level docstring explaining its purpose.
 
 ---
@@ -34,7 +34,7 @@ Example:
 
 ## 3. Docstrings
 
-All public functions, classes, and modules must have docstrings in either **Google** or **NumPy** style.  
+All public functions, classes, and modules must have docstrings in either **Google** or **NumPy** style.
 Choose one style per file and remain consistent.
 
 ### 3.1 Google Style Example
@@ -70,8 +70,8 @@ Choose one style per file and remain consistent.
 
 ## 4. Imports and Structure
 
-- Use **absolute imports** for project modules: from opmed.solver_core import model_builder  
-- Standard library → third-party → local imports, separated by one blank line.  
+- Use **absolute imports** for project modules: from opmed.solver_core import model_builder
+- Standard library → third-party → local imports, separated by one blank line.
 - `__init__.py` files should be minimal — usually only define the public interface.
 
 ---
@@ -95,9 +95,9 @@ All code must pass:
     make lint
 
 which runs:
-- **ruff** (ruff check . --fix) for style and import order  
-- **black** for formatting  
-- **mypy** for type checking  
+- **ruff** (ruff check . --fix) for style and import order
+- **black** for formatting
+- **mypy** for type checking
 
 CI will reject pull requests that fail any of these.
 
@@ -106,8 +106,8 @@ CI will reject pull requests that fail any of these.
 ## 7. Commit Policy
 
 Each commit must represent a logically complete change:
-- Run `pre-commit run --all-files` before committing.  
-- Do not commit generated files (data/output, .cache, etc.).  
+- Run `pre-commit run --all-files` before committing.
+- Do not commit generated files (data/output, .cache, etc.).
 - Prefer small, clear commits over large mixed ones.
 
 ---
@@ -115,8 +115,8 @@ Each commit must represent a logically complete change:
 ## 8. Documentation Consistency
 
 Docstrings and type hints must agree:
-- Parameter names and order must match.  
-- Return types in the docstring must match the annotated types.  
+- Parameter names and order must match.
+- Return types in the docstring must match the annotated types.
 - If behavior changes, update both code and documentation together.
 
 ---
