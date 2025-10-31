@@ -174,7 +174,9 @@ class Optimizer:
         log_to_stdout = getattr(self.cfg.solver, "log_to_stdout", True)
         params.log_to_stdout = bool(log_to_stdout)
 
-    def _solve_model(self, solver: cp_model.CpSolver, model: cp_model.CpModel) -> int:
+    def _solve_model(
+        self, solver: cp_model.CpSolver, model: cp_model.CpModel
+    ) -> cp_model.CpSolverStatus:  # type: ignore[name-defined]
         """
         @brief
         Executes the CP-SAT solving process for the given model instance.
@@ -204,7 +206,7 @@ class Optimizer:
         """
 
         # (1) Invoke OR-Tools solver to find a feasible or optimal solution
-        return int(solver.Solve(model))
+        return solver.Solve(model)
 
     def _extract_assignments(
         self, solver: cp_model.CpSolver, bundle: CpSatModelBundle

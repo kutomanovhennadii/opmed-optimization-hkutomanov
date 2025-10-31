@@ -1,7 +1,7 @@
 {
   "status": "OPTIMAL",
   "objective": 120.0,
-  "runtime": 0.019301599997561425,
+  "runtime": 0.018090800003847107,
   "num_workers": 1,
   "random_seed": 42,
   "search_branching": "AUTOMATIC",

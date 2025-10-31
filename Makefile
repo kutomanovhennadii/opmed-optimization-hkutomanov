@@ -11,9 +11,13 @@ setup:
 
 # Линтеры и статический анализ
 lint:
-	ruff check . --fix
-	black --check .
-	mypy src
+	@echo "==> [LINT] Running pre-commit (with double-run)..."
+	poetry run pre-commit run --all-files || poetry run pre-commit run --all-files
+
+#lint:
+#	ruff check . --fix
+#	black --check .
+#	mypy src
 
 # Форматирование (автоисправление)
 fmt:
@@ -46,7 +50,10 @@ tune:
 
 # Очистка мусора
 clean:
-	rm -rf .pytest_cache .mypy_cache .ruff_cache .coverage
+	-rd /s /q .pytest_cache
+	-rd /s /q .mypy_cache
+	-rd /s /q .ruff_cache
+	-del /f /q .coverage
 
 # Комплексная проверка (формат, линтер, тесты, хуки)
-check: fmt lint test precommit
+check: fmt lint test
