@@ -260,7 +260,7 @@ class Optimizer:
         # (3) Return both assignment sets as structured output
         return {"x": assign_x, "y": assign_y}
 
-    def _status_name(self, status_code: int) -> str:
+    def _status_name(self, status_code: cp_model.CpSolverStatus) -> str:  # type: ignore[name-defined]
         """
         @brief
         Converts an OR-Tools solver status code into a human-readable string label.
