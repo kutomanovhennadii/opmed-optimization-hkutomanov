@@ -298,7 +298,7 @@ class Optimizer:
         }
 
         # (2) Return readable name, or generic fallback for unknown codes
-        return mapping.get(status_code, f"STATUS_{status_code}")
+        return mapping.get(status_code, f"STATUS_{int(status_code)}")
 
     def _log_solver_info(self, solver: cp_model.CpSolver) -> None:
         """
