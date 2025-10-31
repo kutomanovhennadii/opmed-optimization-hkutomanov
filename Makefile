@@ -1,7 +1,7 @@
 ﻿PYTHON ?= python
 PKG = src/opmed
 
-.PHONY: setup lint test fmt check tune run clean
+.PHONY: setup lint test fmt precommit hooks tune run clean schemas check
 
 # Установка зависимостей
 setup:
@@ -24,9 +24,17 @@ fmt:
 test:
 	pytest -q
 
-# Локальный предкоммит-чекер
-check:
-	$(PYTHON) scripts/local_check.py
+# Предкоммит и линтеры
+precommit:
+	poetry run pre-commit run --all-files || poetry run pre-commit run --all-files
+
+
+hooks:
+	pre-commit install
+
+# Генерация JSON-схем
+schemas:
+	$(PYTHON) scripts/gen_schemas.py
 
 # Запуск основного пайплайна
 run:
@@ -40,13 +48,5 @@ tune:
 clean:
 	rm -rf .pytest_cache .mypy_cache .ruff_cache .coverage
 
-.PHONY: precommit hooks
-
-# Установка и запуск pre-commit
-hooks:
-	pre-commit install
-
-precommit:
-	pre-commit run --all-files
-
+# Комплексная проверка (формат, линтер, тесты, хуки)
 check: fmt lint test precommit

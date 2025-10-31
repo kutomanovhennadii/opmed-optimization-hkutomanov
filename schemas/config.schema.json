@@ -1,0 +1,233 @@
+{
+  "$defs": {
+    "SolverConfig": {
+      "additionalProperties": false,
+      "description": "Full CP-SAT solver configuration (compatible with tuning interface 3.2.10).\n\nCovers both production parameters and all hyperparameters used for tuning.\nDefault values are chosen for safe, reproducible production runs.",
+      "properties": {
+        "search_branching": {
+          "default": "AUTOMATIC",
+          "description": "Search strategy: AUTOMATIC | PORTFOLIO | FIXED_SEARCH",
+          "title": "Search Branching",
+          "type": "string"
+        },
+        "num_workers": {
+          "default": 4,
+          "description": "Parallel workers (threads)",
+          "minimum": 0,
+          "title": "Num Workers",
+          "type": "integer"
+        },
+        "max_time_in_seconds": {
+          "default": 60,
+          "description": "Solver time limit (seconds)",
+          "minimum": 0,
+          "title": "Max Time In Seconds",
+          "type": "integer"
+        },
+        "random_seed": {
+          "default": 0,
+          "description": "Random seed for reproducibility",
+          "minimum": 0,
+          "title": "Random Seed",
+          "type": "integer"
+        },
+        "cp_model_presolve": {
+          "default": true,
+          "description": "Enable presolver before search (default: True)",
+          "title": "Cp Model Presolve",
+          "type": "boolean"
+        },
+        "linearization_level": {
+          "default": 0,
+          "description": "Level of linearization: 0 = off, 1 = basic, 2 = aggressive",
+          "maximum": 2,
+          "minimum": 0,
+          "title": "Linearization Level",
+          "type": "integer"
+        },
+        "stop_after_first_solution": {
+          "default": false,
+          "description": "Stop immediately after first feasible solution",
+          "title": "Stop After First Solution",
+          "type": "boolean"
+        },
+        "stop_after_presolve": {
+          "default": false,
+          "description": "Stop after presolve phase (diagnostics only)",
+          "title": "Stop After Presolve",
+          "type": "boolean"
+        },
+        "relative_gap_limit": {
+          "default": 0.0,
+          "description": "Relative optimality gap tolerance (0 = exact)",
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Relative Gap Limit",
+          "type": "number"
+        },
+        "absolute_gap_limit": {
+          "default": 0.0,
+          "description": "Absolute optimality gap tolerance",
+          "minimum": 0.0,
+          "title": "Absolute Gap Limit",
+          "type": "number"
+        },
+        "use_optional_variables": {
+          "default": false,
+          "description": "Allow optional variables for stochastic branching",
+          "title": "Use Optional Variables",
+          "type": "boolean"
+        },
+        "search_randomization_tolerance": {
+          "default": 0.0,
+          "description": "Tolerance for randomization in search heuristics (0 = deterministic)",
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Search Randomization Tolerance",
+          "type": "number"
+        },
+        "max_num_conflicts": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Maximum allowed number of conflicts before stop",
+          "title": "Max Num Conflicts"
+        },
+        "max_num_branches": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Maximum number of branches before stop",
+          "title": "Max Num Branches"
+        },
+        "max_memory_in_mb": {
+          "anyOf": [
+            {
+              "minimum": 128,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Memory limit for solver (MB)",
+          "title": "Max Memory In Mb"
+        },
+        "max_delta": {
+          "default": 0.0,
+          "description": "Relative improvement threshold (anytime search)",
+          "minimum": 0.0,
+          "title": "Max Delta",
+          "type": "number"
+        },
+        "use_sat_inprocessing": {
+          "default": true,
+          "description": "Enable SAT in-processing during search",
+          "title": "Use Sat Inprocessing",
+          "type": "boolean"
+        },
+        "log_to_stdout": {
+          "default": true,
+          "description": "Print solver logs to stdout",
+          "title": "Log To Stdout",
+          "type": "boolean"
+        }
+      },
+      "title": "SolverConfig",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Runtime configuration loaded from config.yaml.",
+  "properties": {
+    "time_unit": {
+      "default": 0.0833,
+      "description": "Tick size in hours (5 min = 1/12 h)",
+      "exclusiveMinimum": 0.0,
+      "title": "Time Unit",
+      "type": "number"
+    },
+    "rooms_max": {
+      "default": 20,
+      "description": "Maximum number of operating rooms",
+      "minimum": 1,
+      "title": "Rooms Max",
+      "type": "integer"
+    },
+    "shift_min": {
+      "default": 5.0,
+      "description": "Minimum shift length (hours)",
+      "exclusiveMinimum": 0.0,
+      "title": "Shift Min",
+      "type": "number"
+    },
+    "shift_max": {
+      "default": 12.0,
+      "description": "Maximum shift length (hours)",
+      "exclusiveMinimum": 0.0,
+      "title": "Shift Max",
+      "type": "number"
+    },
+    "shift_overtime": {
+      "default": 9.0,
+      "description": "Overtime threshold (hours)",
+      "minimum": 0.0,
+      "title": "Shift Overtime",
+      "type": "number"
+    },
+    "overtime_multiplier": {
+      "default": 1.5,
+      "description": "Overtime cost multiplier",
+      "minimum": 1.0,
+      "title": "Overtime Multiplier",
+      "type": "number"
+    },
+    "buffer": {
+      "default": 0.25,
+      "description": "Room-change buffer in hours (e.g. 0.25 = 15 min)",
+      "exclusiveMinimum": 0.0,
+      "title": "Buffer",
+      "type": "number"
+    },
+    "utilization_target": {
+      "default": 0.8,
+      "description": "Required minimum utilization (0..1)",
+      "maximum": 1.0,
+      "minimum": 0.0,
+      "title": "Utilization Target",
+      "type": "number"
+    },
+    "enforce_surgery_duration_limit": {
+      "default": true,
+      "description": "Reject surgeries longer than shift_max if True",
+      "title": "Enforce Surgery Duration Limit",
+      "type": "boolean"
+    },
+    "timezone": {
+      "default": "UTC",
+      "description": "IANA timezone name, e.g. 'UTC'",
+      "title": "Timezone",
+      "type": "string"
+    },
+    "solver": {
+      "$ref": "#/$defs/SolverConfig"
+    }
+  },
+  "title": "Config",
+  "type": "object"
+}
