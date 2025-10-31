@@ -1,14 +1,14 @@
 repos:
-  # --- Базовые стандартные хуки ---
+  # --- Base standard hooks ---
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.6.0
+    rev: v6.0.0
     hooks:
       - id: trailing-whitespace
       - id: end-of-file-fixer
       - id: check-yaml
       - id: check-toml
 
-  # --- Black: автоформатирование ---
+  # --- Black: auto-formatting ---
   - repo: https://github.com/psf/black
     rev: 24.10.0
     hooks:
@@ -16,14 +16,14 @@ repos:
         additional_dependencies: [click]
         language_version: python3.11
 
-  # --- Ruff: линтер и автофикс ---
+  # --- Ruff: linter and auto-fix ---
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.6.9
     hooks:
       - id: ruff
         args: ["--fix"]
 
-  # --- Mypy: проверка типов ---
+  # --- Mypy: type checking ---
   - repo: https://github.com/pre-commit/mirrors-mypy
     rev: v1.11.2
     hooks:
@@ -34,7 +34,7 @@ repos:
           - --ignore-missing-imports
           - --explicit-package-bases
           - -p
-          - opmed          # проверяем пакет по имени, не папку src
+          - opmed          # check package by name, not src folder
         additional_dependencies:
           - pydantic
           - pandas
