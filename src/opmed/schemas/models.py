@@ -38,7 +38,7 @@ class Surgery(_StrictBaseModel):
         start_time: Surgery start time (ISO-8601, expected UTC unless Config.timezone provided).
         end_time:   Surgery end time   (ISO-8601, expected UTC unless Config.timezone provided).
         duration:   Optional duration in hours; may be computed as (end_time – start_time).
-        room_hint:  Optional preferred operating-room label.
+        room_id:  Optional preferred operating-room label.
     """
 
     surgery_id: str = Field(..., description="Unique identifier")
@@ -47,7 +47,7 @@ class Surgery(_StrictBaseModel):
     duration: float | None = Field(
         None, description="Duration in hours; optional if computable from timestamps"
     )
-    room_hint: str | None = Field(None, description="Preferred operating room label (optional)")
+    room_id: str | None = Field(None, description="Preferred operating room label (optional)")
 
 
 class SolverConfig(_StrictBaseModel):

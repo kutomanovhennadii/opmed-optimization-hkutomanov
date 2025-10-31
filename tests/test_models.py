@@ -19,7 +19,7 @@ def test_surgery_model_valid():
         start_time=datetime(2025, 10, 29, 8, 30, tzinfo=UTC),
         end_time=datetime(2025, 10, 29, 10, 15, tzinfo=UTC),
         duration=1.75,
-        room_hint="A1",
+        room_id="A1",
     )
     assert s.surgery_id == "S001"
     assert s.duration == pytest.approx(1.75)

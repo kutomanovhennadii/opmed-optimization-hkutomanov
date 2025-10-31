@@ -1,6 +1,6 @@
 {
   "additionalProperties": false,
-  "description": "Represents a single surgery entry from surgeries.csv.\n\nFields:\n    surgery_id: Unique identifier of the surgery.\n    start_time: Surgery start time (ISO-8601, expected UTC unless Config.timezone provided).\n    end_time:   Surgery end time   (ISO-8601, expected UTC unless Config.timezone provided).\n    duration:   Optional duration in hours; may be computed as (end_time – start_time).\n    room_hint:  Optional preferred operating-room label.",
+  "description": "Represents a single surgery entry from surgeries.csv.\n\nFields:\n    surgery_id: Unique identifier of the surgery.\n    start_time: Surgery start time (ISO-8601, expected UTC unless Config.timezone provided).\n    end_time:   Surgery end time   (ISO-8601, expected UTC unless Config.timezone provided).\n    duration:   Optional duration in hours; may be computed as (end_time – start_time).\n    room_id:  Optional preferred operating-room label.",
   "properties": {
     "surgery_id": {
       "description": "Unique identifier",
@@ -32,7 +32,7 @@
       "description": "Duration in hours; optional if computable from timestamps",
       "title": "Duration"
     },
-    "room_hint": {
+    "room_id": {
       "anyOf": [
         {
           "type": "string"
