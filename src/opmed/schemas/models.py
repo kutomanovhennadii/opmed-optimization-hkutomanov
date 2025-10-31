@@ -137,7 +137,7 @@ class Config(_StrictBaseModel):
         True, description="Reject surgeries longer than shift_max if True"
     )
     timezone: str = Field("UTC", description="IANA timezone name, e.g. 'UTC'")
-    solver: SolverConfig = Field(default_factory=SolverConfig)
+    solver: SolverConfig = Field(default_factory=SolverConfig.model_construct)
 
 
 class SolutionRow(_StrictBaseModel):

@@ -11,7 +11,7 @@ setup:
 
 # Линтеры и статический анализ
 lint:
-	ruff check .
+	ruff check . --fix
 	black --check .
 	mypy src
 
