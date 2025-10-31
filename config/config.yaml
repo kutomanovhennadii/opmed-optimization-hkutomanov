@@ -1,0 +1,45 @@
+# configs/config.yaml
+# Runtime configuration for Opmed optimization runs.
+
+# --- Model / business rules (units: hours unless noted) ---
+time_unit: 0.0833333333    # 1/12 h = 5 minutes
+rooms_max: 20
+shift_min: 5.0
+shift_max: 12.0
+shift_overtime: 9.0
+overtime_multiplier: 1.5
+buffer: 0.25               # 15 minutes between rooms for the same anesthesiologist
+utilization_target: 0.80
+enforce_surgery_duration_limit: true  # reject surgeries > shift_max
+
+# --- Timezone context for I/O parsing/formatting (IANA name) ---
+timezone: "UTC"
+
+# --- I/O paths (relative to repo root unless absolute) ---
+surgeries_csv: "data/input/surgeries.csv"
+output_dir: "data/output"
+
+# --- Validation & artifacts toggles ---
+validation:
+  write_report: true            # validation_report.json
+  fail_on_warnings: false
+visualization:
+  save_plot: true               # solution_plot.png
+  dpi: 120
+metrics:
+  save_metrics: true            # metrics.json / metrics_summary.csv
+  save_solver_log: true         # solver.log
+
+# --- CP-SAT solver parameters (names align with CpSolverParameters) ---
+solver:
+  search_branching: "AUTOMATIC"     # e.g., AUTOMATIC | PORTFOLIO | FIXED_SEARCH
+  num_workers: 8                    # 0/absent => solver decides; >=1 to pin
+  max_time_in_seconds: 60
+  random_seed: 42
+  log_to_stdout: true               # emit solver log to stdout
+
+# --- Reproducibility metadata (optional) ---
+experiment:
+  name: "baseline_run"
+  tags: ["baseline", "cp-sat", "opmed"]
+  description: "Baseline configuration derived from Epics 1–2 theory."

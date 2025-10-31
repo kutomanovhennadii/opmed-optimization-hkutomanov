@@ -1,0 +1,60 @@
+# configs/tune_grid.yaml
+# Hyperparameter grid for solver tuning experiments.
+# Only solver-related parameters are enumerated here.
+
+solver:
+  grid:
+    # Parallelism
+    num_workers: [1, 4, 8]
+
+    # Time budget per run (seconds)
+    max_time_in_seconds: [15, 30, 60]
+
+    # Search strategy
+    search_branching: ["AUTOMATIC", "PORTFOLIO", "FIXED_SEARCH"]
+
+    # Stochasticity / reproducibility
+    random_seed: [0, 42, 1337]
+
+    # Presolve / linearization
+    cp_model_presolve: [true, false]
+    linearization_level: [0, 1, 2]
+
+    # Stop criteria / optimality gap
+    stop_after_first_solution: [false, true]
+    relative_gap_limit: [0.0, 0.01, 0.05]
+
+    # Heuristic and resource controls
+    use_optional_variables: [true, false]
+    search_randomization_tolerance: [0.0, 0.1, 0.3]
+    max_num_conflicts: [100000, 1000000]
+    max_num_branches: [100000, 1000000]
+    max_memory_in_mb: [2048, 4096, 8192]
+    max_delta: [0.0, 0.01]
+    absolute_gap_limit: [0.0, 0.001]
+    use_sat_inprocessing: [true, false]
+    stop_after_presolve: [false, true]
+
+  fixed:
+    # Keep logs for post-hoc analysis
+    log_to_stdout: true
+
+# Optional run-level controls for the tuner (not passed to solver directly)
+tuning:
+  strategy: "grid"        # grid | random
+  max_runs: 100           # safety cap if strategy=random
+  shuffle_grid: false     # randomize evaluation order for load balancing
+  concurrent_trials: 1    # external parallelism of the tuner (not num_workers)
+
+# Optional constant model context during tuning (do not sweep these)
+context:
+  time_unit: 0.0833333333
+  rooms_max: 20
+  shift_min: 5.0
+  shift_max: 12.0
+  shift_overtime: 9.0
+  overtime_multiplier: 1.5
+  buffer: 0.25
+  utilization_target: 0.80
+  enforce_surgery_duration_limit: true
+  timezone: "UTC"
