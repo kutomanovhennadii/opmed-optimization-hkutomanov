@@ -1,14 +1,20 @@
 ﻿from __future__ import annotations
 
+import json
 import logging
 import time
+from datetime import datetime
+from pathlib import Path
 from typing import Any
 
+import ortools
 from ortools.sat.python import cp_model
 
 from opmed.schemas.models import Config
 
 logger = logging.getLogger(__name__)
+
+ORTOOLS_VERSION: str = getattr(ortools, "__version__", "unknown")
 
 SolveResult = dict[str, Any]
 CpSatModelBundle = dict[str, Any]
@@ -47,13 +53,7 @@ class Optimizer:
         solver = self._make_solver()
         self._apply_parameters(solver)
 
-        logger.info(
-            "Solver start (workers=%s, max_time=%s, branching=%s, seed=%s)",
-            getattr(self.cfg.solver, "num_workers", 0),
-            getattr(self.cfg.solver, "max_time_in_seconds", None),
-            str(getattr(self.cfg.solver, "search_branching", "AUTOMATIC")).upper(),
-            getattr(self.cfg.solver, "random_seed", None),
-        )
+        self._log_solver_info(solver)
 
         t0 = time.perf_counter()
         status_code = self._solve_model(solver, bundle["model"])
@@ -68,19 +68,16 @@ class Optimizer:
             # Note: objective could be scaled internally; we expose as-is.
             objective_value = solver.ObjectiveValue()
 
-        logger.info(
-            "Solver finished: status=%s, objective=%s, runtime=%.3fs",
-            status,
-            objective_value,
-            t1 - t0,
-        )
-
         result: SolveResult = {
             "assignment": assignment,
             "status": status,
             "objective": objective_value,
             "runtime": t1 - t0,
         }
+
+        self._write_solver_log(solver, status, objective_value, t1 - t0)
+        self._write_metrics(result)
+
         return result
 
     # -------------------- Internals --------------------
@@ -300,3 +297,283 @@ class Optimizer:
 
         # (2) Return readable name, or generic fallback for unknown codes
         return mapping.get(status_code, f"STATUS_{status_code}")
+
+    def _log_solver_info(self, solver: cp_model.CpSolver) -> None:
+        """
+        @brief
+        Logs a short header with solver configuration and OR-Tools version,
+        providing traceability for each optimization run.
+
+        @details
+        This method prints a concise summary of the solver’s configuration,
+        such as the number of workers, time limit, branching mode, and random seed.
+        The goal is to make solver behavior reproducible and auditable
+        by preserving the parameters used in each run.
+        The debug log additionally outputs the full text of applied solver parameters.
+
+        Typical example log:
+            INFO  Solver start (ortools=9.10.4067, workers=1, max_time=10, branching=AUTOMATIC, seed=42)
+            DEBUG Applied parameters:
+            max_time_in_seconds: 10
+            num_search_workers: 1
+            search_branching: AUTOMATIC_SEARCH
+            ...
+
+        @params
+            solver : cp_model.CpSolver
+                The solver instance whose parameter configuration will be logged.
+
+        @returns
+            None. Produces INFO and DEBUG log messages for traceability.
+        """
+
+        branching = str(getattr(self.cfg.solver, "search_branching", "AUTOMATIC")).upper()
+        logger.info(
+            "Solver start (ortools=%s, workers=%s, max_time=%s, branching=%s, seed=%s)",
+            ORTOOLS_VERSION,
+            getattr(self.cfg.solver, "num_workers", 0),
+            getattr(self.cfg.solver, "max_time_in_seconds", None),
+            branching,
+            getattr(self.cfg.solver, "random_seed", None),
+        )
+        logger.debug("Applied parameters:\n%s", str(solver.parameters))
+
+    def _write_solver_log(
+        self,
+        solver: cp_model.CpSolver,
+        status: str,
+        objective: float | None,
+        runtime: float,
+    ) -> None:
+        """
+        @brief
+        Writes a complete textual solver report to `<output_dir>/solver.log`,
+        capturing configuration, parameters, results, and performance metrics.
+
+        @details
+        This method generates a structured and timestamped log file
+        describing each optimization run. It records:
+          - Environment info (ORTools version, search strategy, random seed)
+          - Configured solver parameters
+          - Experiment metadata (if present in cfg.experiment)
+          - Solver outcome (status, objective, runtime)
+          - Full solver `ResponseStats` summary
+
+        The log file is stored in the directory `cfg.output_dir`
+        (default: `"data/output"`). Logging can be disabled via
+        `cfg.metrics.save_solver_log = False`.
+
+        Example file contents:
+            [2025-10-31T15:20:18Z] SOLVER RUN
+            ortools_version: 9.10.4067
+            random_seed: 42
+            num_workers: 1
+            max_time_in_seconds: 3
+            search_branching: AUTOMATIC
+            experiment.name: baseline
+            experiment.tags: test,smoke
+            experiment.description: Quick feasibility check
+
+            == Parameters ==
+            num_search_workers: 1
+            max_time_in_seconds: 3
+            search_branching: AUTOMATIC_SEARCH
+
+            == Result ==
+            status: OPTIMAL
+            objective: 145.0
+            runtime_sec: 0.331250
+
+            == ResponseStats ==
+            ...
+
+        @params
+            solver : cp_model.CpSolver
+                The solver instance containing final parameters and statistics.
+            status : str
+                The solver’s final status name ("FEASIBLE", "OPTIMAL", etc.).
+            objective : float | None
+                The value of the objective function (if defined).
+            runtime : float
+                The total runtime of the solver in seconds.
+
+        @returns
+            None. Creates a persistent textual log for reproducibility.
+        """
+
+        # (1) Determine output directory and ensure it exists
+        output_dir = Path(getattr(self.cfg, "output_dir", "data/output"))
+
+        # (2) Resolve whether to save solver log from cfg.metrics
+        metrics_cfg = getattr(self.cfg, "metrics", None)
+        if isinstance(metrics_cfg, dict):
+            save_solver_log = bool(metrics_cfg.get("save_solver_log", True))
+        else:
+            save_solver_log = (
+                True if metrics_cfg is None else bool(getattr(metrics_cfg, "save_solver_log", True))
+            )
+        if not save_solver_log:
+            return
+
+        output_dir.mkdir(parents=True, exist_ok=True)
+        log_path = output_dir / "solver.log"
+
+        # (3) Extract solver and configuration metadata
+        branching = str(getattr(self.cfg.solver, "search_branching", "AUTOMATIC")).upper()
+        seed = getattr(self.cfg.solver, "random_seed", None)
+        num_workers = getattr(self.cfg.solver, "num_workers", None)
+        max_time = getattr(self.cfg.solver, "max_time_in_seconds", None)
+        exp = getattr(self.cfg, "experiment", None)
+
+        # (4) Construct timestamped header with experiment info
+        ts = datetime.utcnow().isoformat(timespec="seconds") + "Z"
+        header = [
+            f"[{ts}] SOLVER RUN",
+            f"ortools_version: {ORTOOLS_VERSION}",
+            f"random_seed: {seed}",
+            f"num_workers: {num_workers}",
+            f"max_time_in_seconds: {max_time}",
+            f"search_branching: {branching}",
+        ]
+        if exp is not None:
+            if isinstance(exp, dict):
+                exp_name = exp.get("name")
+                exp_tags = exp.get("tags")
+                exp_desc = exp.get("description")
+            else:
+                exp_name = getattr(exp, "name", None)
+                exp_tags = getattr(exp, "tags", None)
+                exp_desc = getattr(exp, "description", None)
+            header.append(f"experiment.name: {exp_name}")
+            header.append(f"experiment.tags: {exp_tags}")
+            header.append(f"experiment.description: {exp_desc}")
+
+        # (5) Compose the solver results and detailed stats
+        body_lines = [
+            "",
+            "== Parameters ==",
+            str(solver.parameters),
+            "",
+            "== Result ==",
+            f"status: {status}",
+            f"objective: {objective}",
+            f"runtime_sec: {runtime:.6f}",
+            "",
+            "== ResponseStats ==",
+        ]
+
+        try:
+            body_lines.append(solver.ResponseStats())
+        except RuntimeError:
+            body_lines.append("<no ResponseStats: solve() has not been called>")
+        body_lines.append("")
+
+        # (6) Write the log file
+        with log_path.open("w", encoding="utf-8") as f:
+            f.write("\n".join(header + body_lines))
+            f.write("\n")
+
+        # (7) Debug confirmation
+        logger.debug("Solver log written to %s", str(log_path))
+
+    def _write_metrics(self, result: dict[str, object]) -> None:
+        """
+        @brief
+        Saves structured solver metrics to `<output_dir>/metrics.json`
+        for downstream analysis or automated evaluation.
+
+        @details
+        This method generates a JSON file summarizing the solver’s
+        configuration, runtime, and results.
+        It provides a reproducible, machine-readable artifact
+        that can be parsed by dashboards, pipelines, or CI jobs.
+
+        The metrics file includes:
+          - solver status and objective value,
+          - runtime duration,
+          - key solver parameters (workers, branching, seed, time limit),
+          - OR-Tools version,
+          - optional experiment metadata (if present in cfg.experiment).
+
+        The output file is written to `cfg.output_dir` (default: `data/output`).
+        Saving can be disabled by setting `cfg.metrics.save_metrics = False`.
+
+        Example output (`metrics.json`):
+            {
+              "status": "OPTIMAL",
+              "objective": 145.0,
+              "runtime": 0.33125,
+              "num_workers": 1,
+              "random_seed": 42,
+              "search_branching": "AUTOMATIC",
+              "max_time_in_seconds": 3,
+              "ortools_version": "9.10.4067",
+              "experiment": {
+                "name": "baseline",
+                "tags": ["smoke", "ci"],
+                "description": "Minimal reproducible test"
+              }
+            }
+
+        @params
+            result : dict[str, object]
+                Dictionary containing solver output fields:
+                status, objective, runtime, etc.
+
+        @returns
+            None. Writes the JSON metrics file and logs the output path.
+        """
+
+        # (1) Determine output directory and ensure it exists
+        output_dir = Path(getattr(self.cfg, "output_dir", "data/output"))
+
+        # (2) Respect configuration flag for saving metrics
+        metrics_cfg = getattr(self.cfg, "metrics", None)
+        if isinstance(metrics_cfg, dict):
+            save_metrics = bool(metrics_cfg.get("save_metrics", True))
+        else:
+            save_metrics = (
+                True if metrics_cfg is None else bool(getattr(metrics_cfg, "save_metrics", True))
+            )
+        if not save_metrics:
+            return
+
+        output_dir.mkdir(parents=True, exist_ok=True)
+        metrics_path = output_dir / "metrics.json"
+
+        # (3) Assemble the JSON payload
+        branching = str(getattr(self.cfg.solver, "search_branching", "AUTOMATIC")).upper()
+        payload = {
+            "status": result.get("status"),
+            "objective": result.get("objective"),
+            "runtime": result.get("runtime"),
+            "num_workers": getattr(self.cfg.solver, "num_workers", None),
+            "random_seed": getattr(self.cfg.solver, "random_seed", None),
+            "search_branching": branching,
+            "max_time_in_seconds": getattr(self.cfg.solver, "max_time_in_seconds", None),
+            "ortools_version": ORTOOLS_VERSION,
+        }
+
+        # (4) Optional experiment metadata
+        exp = getattr(self.cfg, "experiment", None)
+        if exp is not None:
+            if isinstance(exp, dict):
+                payload["experiment"] = {
+                    "name": exp.get("name"),
+                    "tags": exp.get("tags"),
+                    "description": exp.get("description"),
+                }
+            else:
+                payload["experiment"] = {
+                    "name": getattr(exp, "name", None),
+                    "tags": getattr(exp, "tags", None),
+                    "description": getattr(exp, "description", None),
+                }
+
+        # (5) Write the JSON file
+        with metrics_path.open("w", encoding="utf-8") as f:
+            json.dump(payload, f, ensure_ascii=False, indent=2)
+            f.write("\n")
+
+        # (6) Debug confirmation
+        logger.debug("Metrics written to %s", str(metrics_path))
