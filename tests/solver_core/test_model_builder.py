@@ -547,6 +547,39 @@ def test_add_assignment_cardinality_handles_empty_input() -> None:
     assert after == before
 
 
+def test_objective_piecewise_cost_present_and_positive() -> None:
+    """
+    @brief
+    Ensures that `_add_objective_piecewise_cost()` correctly defines
+    a non-empty and positive objective function in the CP-SAT model.
+
+    @details
+    The test verifies that:
+      - After calling `_add_objective_piecewise_cost()`, the model’s
+        `objective` field is present in the serialized Proto.
+      - The objective contains variables (non-empty variable list).
+      - All coefficients in the objective are non-negative, consistent
+        with a minimization of positive cost terms.
+    """
+
+    # --- Arrange ---
+    builder = _make_builder()
+    builder._init_variable_groups()
+    builder._create_intervals()
+    builder._create_boolean_vars()
+    builder._add_constraints()
+
+    # --- Act ---
+    builder._add_objective_piecewise_cost()
+
+    # --- Assert ---
+    proto = builder.model.Proto()
+    assert proto.HasField("objective"), "Expected model to have an objective"
+    obj = proto.objective
+    assert len(obj.vars) > 0, "Objective has no variables"
+    assert all(c >= 0 for c in obj.coeffs), "Objective has negative coefficients"
+
+
 # ---------------------------------------------------------------------------
 # Integration test (expandable with later build steps)
 # ---------------------------------------------------------------------------

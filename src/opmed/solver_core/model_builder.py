@@ -43,8 +43,7 @@ class ModelBuilder:
         self._create_intervals()
         self._create_boolean_vars()
         self._add_constraints()
-        # Placeholders for next steps:
-        # self._add_objective()
+        self._add_objective_piecewise_cost()
 
         return {"model": self.model, "vars": self.vars, "aux": self.aux}
 
@@ -672,5 +671,93 @@ class ModelBuilder:
         # (5) Log final summary
         logger.debug(
             "Added real shift duration bounds with active links for %d anesthesiologists",
+            max_anesth,
+        )
+
+    # ------------------------------------------------------------------
+    # Objective Function
+    # ------------------------------------------------------------------
+
+    def _add_objective_piecewise_cost(self) -> None:
+        """
+        @brief
+        Builds a piecewise-linear cost function for anesthesiologist shifts
+        and sets it as the model’s objective to minimize total workload cost.
+
+        @details
+        Each anesthesiologist `a` has a shift duration defined as `(t_max[a] - t_min[a])`.
+        The cost function models realistic pay and efficiency penalties:
+            cost[a] = max(SHIFT_MIN, duration_a) + 0.5 * max(0, duration_a - SHIFT_OVERTIME)
+        which penalizes overtime at a rate 1.5× of the normal rate beyond `SHIFT_OVERTIME`.
+
+        To avoid fractional coefficients in CP-SAT (integer solver), the function is scaled by 2:
+            cost2[a] = 2 * base_part + overtime_part
+        where:
+            base_part = max(SHIFT_MIN, duration)
+            overtime_part = max(0, duration - SHIFT_OVERTIME)
+
+        The final objective is:
+            Minimize(Σ cost2[a])  — i.e., minimize total scaled shift cost.
+
+        For inactive anesthesiologists (active[a] = 0), the model enforces cost2[a] = 0.
+
+        @params
+            None (uses `self.vars`, `self.aux`, and `self.cfg`).
+
+        @returns
+            None. Adds cost variables and sets the model objective in-place.
+        """
+
+        # (1) Convert configuration parameters from hours to discrete time ticks
+        ticks_per_hour = int(round(1 / self.cfg.time_unit))
+        shift_min = int(round(self.cfg.shift_min * ticks_per_hour))
+        shift_overtime = int(round(self.cfg.shift_overtime * ticks_per_hour))
+        max_anesth = len(self.surgeries)
+        horizon = self.aux["max_time_ticks"]
+
+        # (2) Prepare variable storage for per-anesthesiologist costs
+        self.vars.setdefault("cost", {})
+        cost_terms: list[cp_model.IntVar] = []
+
+        # (3) Build cost expression for each anesthesiologist
+        for a_idx in range(max_anesth):
+            t_min = self.vars["t_min"][a_idx]
+            t_max = self.vars["t_max"][a_idx]
+            active = self.vars["active"][a_idx]
+
+            # (3.1) Compute raw duration of anesthesiologist’s shift
+            duration = self.model.NewIntVar(0, horizon, f"duration_a{a_idx}")
+            self.model.Add(duration == t_max - t_min)
+
+            # (3.2) Base shift cost — at least SHIFT_MIN, even if duration is shorter
+            base_part = self.model.NewIntVar(0, horizon, f"base_a{a_idx}")
+            self.model.AddMaxEquality(base_part, [duration, shift_min])
+
+            # (3.3) Overtime cost — positive part of (duration - SHIFT_OVERTIME)
+            ov_diff = self.model.NewIntVar(-horizon, horizon, f"ov_diff_a{a_idx}")
+            self.model.Add(ov_diff == duration - shift_overtime)
+            overtime_part = self.model.NewIntVar(0, horizon, f"overtime_a{a_idx}")
+            self.model.AddMaxEquality(overtime_part, [ov_diff, 0])
+
+            # (3.4) Combine scaled cost: cost2 = 2*base_part + overtime_part
+            cost2 = self.model.NewIntVar(0, 3 * horizon, f"cost2_a{a_idx}")
+
+            # Conditional activation:
+            # if active[a]:   cost2 == 2*base_part + overtime_part
+            # else:           cost2 == 0
+            self.model.Add(cost2 == 2 * base_part + overtime_part).OnlyEnforceIf(active)
+            self.model.Add(cost2 == 0).OnlyEnforceIf(active.Not())
+
+            # (3.5) Store and register the cost variable
+            self.vars["cost"][a_idx] = cost2
+            cost_terms.append(cost2)
+
+        # (4) Define the global objective: minimize total scaled cost
+        # The scale factor (×2) does not affect optimality, only integer precision.
+        self.model.Minimize(sum(cost_terms))
+
+        # (5) Log final confirmation for traceability
+        logger.debug(
+            "Added piecewise cost objective for %d anesthesiologists (conditional on active)",
             max_anesth,
         )
