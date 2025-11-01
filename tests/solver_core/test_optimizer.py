@@ -9,55 +9,38 @@ from opmed.solver_core.optimizer import Optimizer, SolveResult
 
 def _mini_config() -> Config:
     """
-    @brief
-    Creates a minimal configuration object for fast solver tests.
-
-    @details
-    Generates a compact `Config` with:
-      • only two available rooms,
-      • a very short time limit (3 seconds),
-      • single-threaded solver execution,
-      • fixed random seed for reproducibility.
-
-    This configuration reduces solver complexity while preserving
-    realistic parameter structure for end-to-end tests.
-
-    @returns
-        Config — lightweight configuration instance suitable for unit tests.
+    Creates a minimal Config for quick solver tests.
+    Uses two rooms, short 3-second time limit, single thread, and fixed random seed.
+    Ensures fast, deterministic runs suitable for unit tests.
     """
     cfg = Config()
-    cfg.rooms_max = 2  # small number of rooms for speed
-    cfg.solver.max_time_in_seconds = 3  # quick limit to avoid long solves
-    cfg.solver.num_workers = 1  # deterministic single-threaded mode
+    cfg.rooms_max = 2  # minimal room count for lightweight model
+    cfg.solver.max_time_in_seconds = 3  # very short solving window
+    cfg.solver.num_workers = 1  # enforce single-threaded determinism
     cfg.solver.search_branching = "AUTOMATIC"
-    cfg.solver.random_seed = 42
+    cfg.solver.random_seed = 42  # fixed seed for reproducible results
     return cfg
 
 
 def _mini_surgeries() -> list[Surgery]:
     """
-    @brief
-    Produces a compact synthetic dataset of surgeries for test runs.
-
-    @details
-    Returns three fixed, non-overlapping surgeries within a single day.
-    These short intervals simulate realistic scheduling inputs without
-    introducing conflicts, allowing the model to reach feasibility quickly.
-
-    @returns
-        list[Surgery] — three surgery records with ISO-8601 timestamps.
+    Produces a tiny synthetic set of surgeries for test runs.
+    Returns three short, non-overlapping surgeries to guarantee quick feasibility.
     """
     return [
+        # (1) Morning case 08:00-09:00
         Surgery(
             surgery_id="s1",
             start_time="2025-01-01T08:00:00Z",
             end_time="2025-01-01T09:00:00Z",
         ),
+        # (2) Second case after 10-minute gap
         Surgery(
             surgery_id="s2",
             start_time="2025-01-01T09:10:00Z",
             end_time="2025-01-01T10:00:00Z",
         ),
+        # (3) Final short case mid-morning
         Surgery(
             surgery_id="s3",
             start_time="2025-01-01T10:30:00Z",
@@ -68,41 +51,22 @@ def _mini_surgeries() -> list[Surgery]:
 
 def test_optimizer_solve_feasible_and_objective_present() -> None:
     """
-    @brief
-    End-to-end smoke test verifying that the optimizer produces
-    a feasible (or optimal) schedule and a valid objective function.
-
-    @details
-    Steps:
-      1. Build a minimal model using `_mini_config()` and `_mini_surgeries()`.
-      2. Run the `Optimizer.solve()` routine.
-      3. Confirm that:
-         - The solver status is FEASIBLE or OPTIMAL.
-         - The objective field is present and non-null.
-         - The assignment dictionary (`x`, `y`) contains valid results.
-
-    This test ensures correct integration between model construction
-    and solver execution, verifying that all core subsystems interact
-    coherently under time-limited solving conditions.
-
-    @returns
-        None. Assertions validate the model’s solvability and output integrity.
+    End-to-end smoke test: verifies that the optimizer finds a feasible or optimal schedule
+    and returns a valid objective together with variable assignments.
     """
-
     # --- Arrange ---
-    cfg = _mini_config()
-    surgeries = _mini_surgeries()
-
+    cfg = _mini_config()  # minimal deterministic config
+    surgeries = _mini_surgeries()  # small synthetic dataset
     builder = ModelBuilder(cfg=cfg, surgeries=surgeries)
-    bundle = builder.build()
-    assert isinstance(bundle["model"], cp_model.CpModel)  # sanity check
+    bundle = builder.build()  # build model and variables
+    assert isinstance(bundle["model"], cp_model.CpModel)  # sanity: valid model built
 
     # --- Act ---
-    opt = Optimizer(cfg)
-    res: SolveResult = opt.solve(bundle)
+    opt = Optimizer(cfg)  # initialize solver wrapper
+    res: SolveResult = opt.solve(bundle)  # execute optimization
 
     # --- Assert ---
-    assert res["status"] in ("FEASIBLE", "OPTIMAL")
-    assert res["objective"] is not None
-    assert isinstance(res["assignment"], dict)
-    assert "x" in res["assignment"] and "y" in res["assignment"]
+    assert res["status"] in ("FEASIBLE", "OPTIMAL")  # solver reached valid status
+    assert res["objective"] is not None  # objective value returned
+    assert isinstance(res["assignment"], dict)  # assignment dictionary exists
+    assert "x" in res["assignment"] and "y" in res["assignment"]  # both variable types populated

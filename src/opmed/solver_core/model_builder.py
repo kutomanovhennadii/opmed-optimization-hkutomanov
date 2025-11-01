@@ -45,7 +45,12 @@ class ModelBuilder:
         self._add_constraints()
         self._add_objective_piecewise_cost()
 
-        return {"model": self.model, "vars": self.vars, "aux": self.aux}
+        return {
+            "model": self.model,
+            "vars": self.vars,
+            "aux": self.aux,
+            "surgeries": self.surgeries,
+        }
 
     # ------------------------------------------------------------------
     # Internal helpers
@@ -754,7 +759,22 @@ class ModelBuilder:
 
         # (4) Define the global objective: minimize total scaled cost
         # The scale factor (×2) does not affect optimality, only integer precision.
-        self.model.Minimize(sum(cost_terms))
+        activation_penalty: float = getattr(self.cfg, "activation_penalty", 0) or 0
+
+        if activation_penalty == 0:
+            # Variant 1 — baseline objective
+            logger.debug("Objective: TotalShiftCost (activation_penalty=0)")
+            self.model.Minimize(sum(cost_terms))
+        else:
+            # Variant 2 — extended objective with activation penalty
+            active_vars = list(self.vars.get("active", {}).values())
+            logger.debug(
+                "Objective: TotalShiftCostWithActivation (activation_penalty=%s, active_vars=%d)",
+                activation_penalty,
+                len(active_vars),
+            )
+            total_cost = sum(cost_terms) + activation_penalty * sum(active_vars)
+            self.model.Minimize(total_cost)
 
         # (5) Log final confirmation for traceability
         logger.debug(

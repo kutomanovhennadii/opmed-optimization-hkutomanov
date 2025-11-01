@@ -50,6 +50,24 @@ class Surgery(_StrictBaseModel):
     room_id: str | None = Field(None, description="Preferred operating room label (optional)")
 
 
+# ------------------------------------------------------------
+# Runtime I/O control block
+# ------------------------------------------------------------
+class IOPolicy(BaseModel):
+    """
+    Runtime behavior controls for artifact and log writing.
+    """
+
+    write_artifacts: bool = Field(
+        True,
+        description="If False, disables writing solution.json, metrics.json, config_snapshot.json.",
+    )
+    write_solver_logs: bool = Field(
+        False,
+        description="If True, writes detailed OR-Tools logs to solver.log.",
+    )
+
+
 class SolverConfig(_StrictBaseModel):
     """
     Full CP-SAT solver configuration (compatible with tuning interface 3.2.10).
@@ -136,6 +154,16 @@ class Config(_StrictBaseModel):
     enforce_surgery_duration_limit: bool = Field(
         True, description="Reject surgeries longer than shift_max if True"
     )
+
+    activation_penalty: float = Field(
+        0.0,
+        ge=0.0,
+        description=(
+            "Weight (penalty) added to the objective function for each active anesthesiologist; "
+            "0 disables this term."
+        ),
+    )
+
     timezone: str = Field("UTC", description="IANA timezone name, e.g. 'UTC'")
     solver: SolverConfig = Field(default_factory=SolverConfig.model_construct)
 
