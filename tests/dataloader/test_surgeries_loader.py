@@ -21,6 +21,15 @@ def _write_csv(tmp_path: Path, name: str, text: str) -> Path:
 # Happy path
 # ------------------------------------------------------------------------------
 def test_valid_csv_returns_success(tmp_path: Path):
+    """
+    @brief
+    Verifies that a valid CSV with proper structure produces a successful LoadResult.
+
+    @details
+    Tests end-to-end behavior of SurgeriesLoader on correctly formatted input.
+    Confirms that surgeries are parsed, validated, and ordered chronologically.
+    """
+    # --- Arrange ---
     csv_path = _write_csv(
         tmp_path,
         "ok.csv",
@@ -31,16 +40,17 @@ def test_valid_csv_returns_success(tmp_path: Path):
         """,
     )
 
+    # --- Act ---
     loader = SurgeriesLoader()
     result = loader.load(csv_path)
 
+    # --- Assert ---
     assert isinstance(result, LoadResult)
     assert result.success is True
     assert len(result.surgeries) == 2
     assert all(isinstance(s, Surgery) for s in result.surgeries)
     assert [s.surgery_id for s in result.surgeries] == ["S001", "S002"]
     assert result.errors == []
-    # chronological order
     assert result.surgeries[0].start_time < result.surgeries[1].start_time
 
 
@@ -48,6 +58,15 @@ def test_valid_csv_returns_success(tmp_path: Path):
 # Row-level issues (non-fatal but lead to success=False)
 # ------------------------------------------------------------------------------
 def test_duplicate_and_invalid_rows_reported(tmp_path: Path):
+    """
+    @brief
+    Ensures duplicate, invalid, or logically inconsistent rows trigger structured issues.
+
+    @details
+    Verifies that multiple non-fatal validation errors (duplicate IDs, wrong duration,
+    bad datetime) are detected, aggregated, and reported via LoadResult.errors.
+    """
+    # --- Arrange ---
     csv_path = _write_csv(
         tmp_path,
         "dupes.csv",
@@ -60,18 +79,31 @@ def test_duplicate_and_invalid_rows_reported(tmp_path: Path):
         """,
     )
 
+    # --- Act ---
     result = SurgeriesLoader().load(csv_path)
 
+    # --- Assert ---
     assert result.success is False
     assert result.surgeries == []
     assert result.kept_rows == 0
     assert result.total_rows == 4
-    # Check presence of expected issue kinds
     kinds = [e["kind"] for e in result.errors]
     assert {"duplicate_id", "non_positive_duration", "invalid_datetime"} <= set(kinds)
 
 
+# ------------------------------------------------------------------------------
+# Fatal structural errors
+# ------------------------------------------------------------------------------
 def test_missing_id_or_missing_time_reported(tmp_path: Path):
+    """
+    @brief
+    Checks detection of missing surgery_id or malformed datetime fields.
+
+    @details
+    Ensures that empty IDs and missing timestamps are correctly marked as issues
+    within the error list, resulting in an unsuccessful LoadResult.
+    """
+    # --- Arrange ---
     csv_path = _write_csv(
         tmp_path,
         "missing.csv",
@@ -82,24 +114,42 @@ def test_missing_id_or_missing_time_reported(tmp_path: Path):
         """,
     )
 
+    # --- Act ---
     result = SurgeriesLoader().load(csv_path)
+
+    # --- Assert ---
     assert result.success is False
     kinds = {e["kind"] for e in result.errors}
     assert {"missing_id", "invalid_datetime"} & kinds or {"missing_id"} <= kinds
 
 
-# ------------------------------------------------------------------------------
-# Fatal structural errors
-# ------------------------------------------------------------------------------
 def test_missing_file_raises_dataerror(tmp_path: Path):
+    """
+    @brief
+    Confirms that a missing input file raises a DataError.
+
+    @details
+    Verifies proper propagation of fatal file-not-found conditions from _read_csv.
+    """
+    # --- Arrange ---
     path = tmp_path / "not_exist.csv"
     loader = SurgeriesLoader()
+
+    # --- Act / Assert ---
     with pytest.raises(DataError) as e:
         loader.load(path)
     assert "not found" in str(e.value).lower()
 
 
 def test_invalid_header_raises_dataerror(tmp_path: Path):
+    """
+    @brief
+    Ensures CSV header validation detects missing required columns.
+
+    @details
+    When CSV lacks required fields, DataError is raised with descriptive message.
+    """
+    # --- Arrange ---
     csv_path = _write_csv(
         tmp_path,
         "bad_header.csv",
@@ -108,6 +158,8 @@ def test_invalid_header_raises_dataerror(tmp_path: Path):
         a,b,c
         """,
     )
+
+    # --- Act / Assert ---
     loader = SurgeriesLoader()
     with pytest.raises(DataError) as e:
         loader.load(csv_path)
@@ -116,6 +168,14 @@ def test_invalid_header_raises_dataerror(tmp_path: Path):
 
 
 def test_no_header_raises_dataerror(tmp_path: Path):
+    """
+    @brief
+    Tests behavior when file lacks header row entirely.
+
+    @details
+    A headerless CSV should trigger DataError indicating missing column names.
+    """
+    # --- Arrange ---
     csv_path = _write_csv(
         tmp_path,
         "no_header.csv",
@@ -123,18 +183,26 @@ def test_no_header_raises_dataerror(tmp_path: Path):
         S001,2025-01-01T07:00:00,2025-01-01T08:00:00
         """,
     )
-    # Manually remove header row detection by truncating headerless read
-    # simulate file without header
     text = csv_path.read_text()
     csv_path.write_text(text, encoding="utf-8")
+
+    # --- Act / Assert ---
     with pytest.raises(DataError):
         SurgeriesLoader().load(csv_path)
 
 
 def test_read_csv_invalid_path_type_raises_dataerror():
-    """Если передан не Path, должно быть выброшено DataError с указанием типа."""
+    """
+    @brief
+    Validates path type enforcement inside _read_csv.
+
+    @details
+    Passing a non-Path object must raise DataError specifying the offending type.
+    """
+    # --- Arrange ---
     loader = SurgeriesLoader()
-    # передаём строку вместо Path
+
+    # --- Act / Assert ---
     with pytest.raises(DataError) as e:
         loader._read_csv("not_a_path")  # type: ignore[arg-type]
     msg = str(e.value)
@@ -144,12 +212,20 @@ def test_read_csv_invalid_path_type_raises_dataerror():
 
 
 def test__read_csv_raises_when_no_header_row(tmp_path: Path):
-    """Если CSV пуст (нет ни одной строки заголовка), выбрасывается DataError 'CSV has no header row'."""
-    csv_path = tmp_path / "no_header.csv"
-    # полностью пустой файл → DictReader.fieldnames == None
-    csv_path.write_text("", encoding="utf-8")
+    """
+    @brief
+    Checks empty CSV file behavior.
 
+    @details
+    When DictReader.fieldnames is None (empty file), DataError 'CSV has no header row'
+    should be raised with proper diagnostic hints.
+    """
+    # --- Arrange ---
+    csv_path = tmp_path / "no_header.csv"
+    csv_path.write_text("", encoding="utf-8")
     loader = SurgeriesLoader()
+
+    # --- Act / Assert ---
     with pytest.raises(DataError) as e:
         loader._read_csv(csv_path)
     err = str(e.value)
@@ -159,18 +235,25 @@ def test__read_csv_raises_when_no_header_row(tmp_path: Path):
 
 
 def test__read_csv_raises_dataerror_on_oserror(monkeypatch, tmp_path: Path):
-    """Если при открытии CSV возникает OSError, выбрасывается DataError с корректным сообщением."""
+    """
+    @brief
+    Verifies graceful handling of OSError during CSV read.
+
+    @details
+    Simulates locked or inaccessible file and ensures DataError provides
+    actionable diagnostic details.
+    """
+    # --- Arrange ---
     csv_path = tmp_path / "locked.csv"
     csv_path.write_text("surgery_id,start_time,end_time\n", encoding="utf-8")
-
     loader = SurgeriesLoader()
 
-    # Подменяем Path.open, чтобы при вызове выбрасывал OSError
     def fail_open(*args, **kwargs):
         raise OSError("Permission denied")
 
     monkeypatch.setattr(Path, "open", fail_open)
 
+    # --- Act / Assert ---
     with pytest.raises(DataError) as e:
         loader._read_csv(csv_path)
     msg = str(e.value)
@@ -181,8 +264,15 @@ def test__read_csv_raises_dataerror_on_oserror(monkeypatch, tmp_path: Path):
 
 
 def test__rows_to_result_catches_schema_error(monkeypatch):
-    """Проверяет, что ошибки при создании модели Surgery добавляются как schema_error."""
-    # Заготовим корректные строки, чтобы дойти до создания модели
+    """
+    @brief
+    Validates that model-construction exceptions are captured as schema_error.
+
+    @details
+    Overrides Surgery class to force an exception and confirms LoadResult
+    records a structured schema_error entry instead of raising.
+    """
+    # --- Arrange ---
     rows = [
         {
             "surgery_id": "S001",
@@ -191,18 +281,17 @@ def test__rows_to_result_catches_schema_error(monkeypatch):
         }
     ]
 
-    # Подменяем Surgery, чтобы выбрасывал исключение при создании
     def broken_surgery(*args, **kwargs):
         raise ValueError("schema broke")
 
     monkeypatch.setattr("opmed.dataloader.surgeries_loader.Surgery", broken_surgery)
-
     from opmed.dataloader.surgeries_loader import SurgeriesLoader
 
+    # --- Act ---
     loader = SurgeriesLoader()
     result = loader._rows_to_result(rows)
 
-    # Убедимся, что ошибка зарегистрирована как schema_error
+    # --- Assert ---
     assert result.success is False
     assert result.errors
     err = result.errors[0]
@@ -215,6 +304,16 @@ def test__rows_to_result_catches_schema_error(monkeypatch):
 # Integration-like sanity: mixed good and bad rows
 # ------------------------------------------------------------------------------
 def test_mixed_rows_only_valid_kept_and_sorted(tmp_path: Path):
+    """
+    @brief
+    Integration-style check for mixed valid and invalid rows.
+
+    @details
+    Confirms partial success behavior — even if valid rows exist, overall
+    success=False when any issue is detected. Ensures consistent counting and
+    reporting of total and error rows.
+    """
+    # --- Arrange ---
     csv_path = _write_csv(
         tmp_path,
         "mixed.csv",
@@ -227,12 +326,11 @@ def test_mixed_rows_only_valid_kept_and_sorted(tmp_path: Path):
         """,
     )
 
+    # --- Act ---
     result = SurgeriesLoader().load(csv_path)
+
+    # --- Assert ---
     assert result.success is False
-    assert (
-        result.kept_rows == 0
-    )  # because any issue marks success=False even if some good rows exist
-    # but still all issues must be reported
+    assert result.kept_rows == 0
     assert len(result.errors) >= 2
-    # file should still be readable
     assert result.total_rows == 4
