@@ -30,8 +30,6 @@ def _synthetic_surgeries() -> list[Surgery]:
                 surgery_id=f"s{i+1}",
                 start_time=start,
                 end_time=end,
-                duration=None,
-                room_id=None,
             )
         )
 

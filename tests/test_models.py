@@ -1,7 +1,5 @@
 ﻿from datetime import datetime
 
-import pytest
-
 from opmed.schemas.models import Config, SolutionRow, SolverConfig, Surgery
 
 # --- Cross-version UTC alias: Py 3.11.4+ has datetime.UTC; older use timezone.utc.
@@ -18,11 +16,8 @@ def test_surgery_model_valid():
         surgery_id="S001",
         start_time=datetime(2025, 10, 29, 8, 30, tzinfo=UTC),
         end_time=datetime(2025, 10, 29, 10, 15, tzinfo=UTC),
-        duration=1.75,
-        room_id="A1",
     )
     assert s.surgery_id == "S001"
-    assert s.duration == pytest.approx(1.75)
     assert s.start_time < s.end_time
 
 

@@ -44,10 +44,6 @@ class Surgery(_StrictBaseModel):
     surgery_id: str = Field(..., description="Unique identifier")
     start_time: datetime = Field(..., description="Surgery start time (ISO-8601)")
     end_time: datetime = Field(..., description="Surgery end time (ISO-8601)")
-    duration: float | None = Field(
-        None, description="Duration in hours; optional if computable from timestamps"
-    )
-    room_id: str | None = Field(None, description="Preferred operating room label (optional)")
 
 
 # ------------------------------------------------------------

@@ -178,8 +178,6 @@ def test_create_intervals_handles_zero_duration(caplog: pytest.LogCaptureFixture
             surgery_id="S1",
             start_time=t_start,
             end_time=t_start,
-            duration=0.0,
-            room_id="R1",
         )
     ]
     builder = ModelBuilder(cfg, surgeries)
@@ -347,15 +345,11 @@ def test_add_buffer_constraints_detects_dangerous_pairs() -> None:
             surgery_id="S1",
             start_time=t0,
             end_time=t0 + dt.timedelta(hours=1),
-            duration=1.0,
-            room_id="R1",
         ),
         Surgery(
             surgery_id="S2",
             start_time=t0 + dt.timedelta(minutes=90),
             end_time=t0 + dt.timedelta(hours=2),
-            duration=0.5,
-            room_id="R2",
         ),
     ]
 
@@ -404,15 +398,11 @@ def test_add_buffer_constraints_builds_logical_rules(caplog: pytest.LogCaptureFi
             surgery_id="S1",
             start_time=t0,
             end_time=t0 + dt.timedelta(hours=1),
-            duration=1.0,
-            room_id="R1",
         ),
         Surgery(
             surgery_id="S2",
             start_time=t0 + dt.timedelta(minutes=90),
             end_time=t0 + dt.timedelta(hours=2),
-            duration=0.5,
-            room_id="R2",
         ),
     ]
 
