@@ -6,7 +6,8 @@ requires = ["setuptools>=68", "wheel"]
 
 [dependency-groups]
 dev = [
-  "toml-sort (>=0.24.3,<0.25.0)"
+  "toml-sort (>=0.24.3,<0.25.0)",
+  "types-pyyaml (>=6.0.12.20250915,<7.0.0.0)"
 ]
 
 [project]

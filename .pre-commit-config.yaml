@@ -41,3 +41,4 @@ repos:
           - pyyaml
           - matplotlib
           - ortools
+          - types-PyYAML
