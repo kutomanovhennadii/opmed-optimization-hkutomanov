@@ -70,7 +70,7 @@ def test_end_to_end_model_solver_metrics(tmp_path: Path, monkeypatch) -> None:
     cfg.solver.random_seed = 0
     cfg.solver.search_branching = "AUTOMATIC"
 
-    if SAVE_ARTIFACTS:
+    if not SAVE_ARTIFACTS:
         monkeypatch.chdir(tmp_path)
         # mute all ResultStore side-effects for clean CI run
         monkeypatch.setattr(result_store_mod.ResultStore, "_write_metrics", lambda *a, **k: None)

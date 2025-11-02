@@ -130,6 +130,14 @@ class SolverConfig(_StrictBaseModel):
     log_to_stdout: bool = Field(True, description="Print solver logs to stdout")
 
 
+class VisualConfig(BaseModel):
+    """Visualization parameters for plot rendering."""
+
+    width: float = Field(19.0, description="Figure width in inches")
+    height: float = Field(10.0, description="Figure height in inches")
+    dpi: int = Field(150, description="Output figure DPI")
+
+
 class Config(_StrictBaseModel):
     """
     Runtime configuration loaded from config.yaml.
@@ -162,6 +170,7 @@ class Config(_StrictBaseModel):
 
     timezone: str = Field("UTC", description="IANA timezone name, e.g. 'UTC'")
     solver: SolverConfig = Field(default_factory=SolverConfig.model_construct)
+    visual: VisualConfig = Field(default_factory=VisualConfig.model_construct)
 
 
 class SolutionRow(_StrictBaseModel):

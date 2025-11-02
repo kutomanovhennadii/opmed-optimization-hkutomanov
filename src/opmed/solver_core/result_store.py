@@ -1,4 +1,5 @@
-﻿from __future__ import annotations
+﻿# result_store.py
+from __future__ import annotations
 
 import json
 import logging

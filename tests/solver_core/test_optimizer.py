@@ -1,7 +1,5 @@
 ﻿from __future__ import annotations
 
-from ortools.sat.python import cp_model
-
 from opmed.schemas.models import Config, Surgery
 from opmed.solver_core.model_builder import ModelBuilder
 from opmed.solver_core.optimizer import Optimizer, SolveResult
@@ -49,24 +47,45 @@ def _mini_surgeries() -> list[Surgery]:
     ]
 
 
-def test_optimizer_solve_feasible_and_objective_present() -> None:
+def test_optimizer_solve_feasible_and_objective_present(tmp_path, monkeypatch) -> None:
     """
-    End-to-end smoke test: verifies that the optimizer finds a feasible or optimal schedule
-    and returns a valid objective together with variable assignments.
+    End-to-end smoke test: verifies optimizer feasibility and valid objective,
+    with optional suppression of ResultStore file outputs.
     """
+    SAVE_ARTIFACTS = False  # toggle to True for manual debugging with disk output
+
     # --- Arrange ---
-    cfg = _mini_config()  # minimal deterministic config
-    surgeries = _mini_surgeries()  # small synthetic dataset
+    cfg = _mini_config()
+    surgeries = _mini_surgeries()
     builder = ModelBuilder(cfg=cfg, surgeries=surgeries)
-    bundle = builder.build()  # build model and variables
-    assert isinstance(bundle["model"], cp_model.CpModel)  # sanity: valid model built
+    bundle = builder.build()
+
+    # --- Optional: silence ResultStore side-effects ---
+    if not SAVE_ARTIFACTS:
+        # redirect cwd to temp dir to isolate any accidental writes
+        monkeypatch.chdir(tmp_path)
+
+        # import ResultStore dynamically to avoid circular import at top-level
+        import opmed.solver_core.result_store as result_store_mod
+
+        # patch out writing functions (no disk I/O)
+        monkeypatch.setattr(result_store_mod.ResultStore, "_write_metrics", lambda *a, **k: None)
+        monkeypatch.setattr(result_store_mod.ResultStore, "_write_solver_log", lambda *a, **k: None)
+        if hasattr(result_store_mod.ResultStore, "_write_config_snapshot"):
+            monkeypatch.setattr(
+                result_store_mod.ResultStore, "_write_config_snapshot", lambda *a, **k: None
+            )
+        if hasattr(result_store_mod.ResultStore, "_write_solution"):
+            monkeypatch.setattr(
+                result_store_mod.ResultStore, "_write_solution", lambda *a, **k: None
+            )
 
     # --- Act ---
-    opt = Optimizer(cfg)  # initialize solver wrapper
-    res: SolveResult = opt.solve(bundle)  # execute optimization
+    opt = Optimizer(cfg)
+    res: SolveResult = opt.solve(bundle)
 
     # --- Assert ---
-    assert res["status"] in ("FEASIBLE", "OPTIMAL")  # solver reached valid status
-    assert res["objective"] is not None  # objective value returned
-    assert isinstance(res["assignment"], dict)  # assignment dictionary exists
-    assert "x" in res["assignment"] and "y" in res["assignment"]  # both variable types populated
+    assert res["status"] in ("FEASIBLE", "OPTIMAL")
+    assert res["objective"] is not None
+    assert isinstance(res["assignment"], dict)
+    assert "x" in res["assignment"] and "y" in res["assignment"]

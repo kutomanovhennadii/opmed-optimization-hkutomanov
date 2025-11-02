@@ -164,6 +164,126 @@ def test_write_solver_log_with_experiment_object(tmp_path, monkeypatch) -> None:
     assert "runtime_sec:" in text
 
 
+def test_write_solution_creates_csv(tmp_path, monkeypatch):
+    """
+    Covers _write_solution branch by redirecting output_dir to tmp_path.
+    No disk pollution occurs because it writes inside pytest's temp folder.
+    """
+    from types import SimpleNamespace
+
+    from opmed.solver_core.result_store import ResultStore
+
+    # fake config: minimal fields for ResultStore
+    cfg = SimpleNamespace(output_dir=tmp_path)
+    store = ResultStore(cfg)
+
+    # fake model bundle (not used directly)
+    bundle = SimpleNamespace()
+
+    # synthetic assignment
+    assignment = {
+        "x": [(1, 10), (2, 11)],
+        "y": [(1, 1), (2, 2)],
+    }
+
+    # Act — call the real method
+    csv_path = store._write_solution(bundle, assignment)
+
+    # Assert
+    p = Path(csv_path)
+    assert p.exists()
+    text = p.read_text(encoding="utf-8")
+    assert "x,1,10" in text
+    assert "y,2,2" in text
+
+
+def test_write_config_snapshot_legacy_branch(tmp_path, monkeypatch):
+    """
+    @brief
+    Covers legacy serialization path where cfg.solver is converted to plain dict.
+
+    @details
+    Ensures backward compatibility with configurations lacking model_dump() support.
+    Uses a dummy TypeAdapter replacement to simulate simplified pydantic behavior
+    and verifies that the resulting snapshot file is successfully written and
+    contains the expected experiment name.
+    """
+
+    import pydantic
+
+    from opmed.solver_core.result_store import ResultStore
+
+    # --- Arrange ---
+    # Replace pydantic.TypeAdapter with dummy implementation
+    class DummyAdapter:
+        def __init__(self, _type): ...
+        def dump_python(self, obj):
+            return vars(obj)
+
+    monkeypatch.setattr(pydantic, "TypeAdapter", DummyAdapter)
+
+    # Prepare configuration with JSON-friendly solver section
+    cfg = _fake_cfg(experiment={"name": "legacy_branch"}, output_dir=str(tmp_path))
+    cfg.solver = vars(cfg.solver)  # (1) Simulate legacy dict-style solver
+
+    store = ResultStore(cfg)
+
+    # --- Act ---
+    # Invoke private method responsible for writing config snapshot
+    path = store._write_config_snapshot()
+
+    # --- Assert ---
+    # Verify that snapshot file exists and includes experiment identifier
+    p = Path(path)
+    assert p.exists()
+    assert "legacy_branch" in p.read_text(encoding="utf-8")
+
+
+def test_write_config_snapshot_modern_branch(tmp_path):
+    """
+    @brief
+    Covers modern serialization branch using Pydantic-like model_dump().
+
+    @details
+    Validates the contemporary code path of _write_config_snapshot(), where
+    configuration objects expose model_dump() returning a JSON-serializable dict.
+    Confirms that the snapshot file is created correctly and contains key
+    configuration fields such as 'rooms_max' and the experiment name.
+    """
+
+    from opmed.solver_core.result_store import ResultStore
+
+    # --- Arrange ---
+    # Define configuration class with model_dump() mimicking Pydantic v2 behavior
+    class CfgWithDump:
+        def __init__(self, out: str):
+            self.output_dir = out
+            self.experiment = {"name": "modern_branch"}
+
+        def model_dump(self):
+            # (1) Return minimal JSON-serializable structure for snapshot
+            return {
+                "rooms_max": 3,
+                "solver": {"num_workers": 1},
+                "experiment": {"name": "modern_branch"},
+            }
+
+    cfg = CfgWithDump(out=str(tmp_path))
+    store = ResultStore(cfg)
+
+    # --- Act ---
+    # Execute snapshot writing for model_dump()-based configuration
+    path = store._write_config_snapshot()
+
+    # --- Assert ---
+    # Verify that file exists and includes expected configuration data
+    p = Path(path)
+    assert p.exists(), "config_snapshot file must be created"
+    text = p.read_text(encoding="utf-8")
+    assert '"rooms_max": 3' in text
+    assert "modern_branch" in text
+
+
 def test_write_metrics_skips_when_object_flag_false(tmp_path, monkeypatch) -> None:
     """
     Verifies that `_write_metrics()` skips writing metrics_<ts>.json
