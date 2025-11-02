@@ -11,7 +11,6 @@ setup:
 
 # Линтеры и статический анализ
 lint:
-	@echo "==> [LINT] Running pre-commit (with double-run)..."
 	poetry run pre-commit run --all-files || poetry run pre-commit run --all-files
 
 #lint:
