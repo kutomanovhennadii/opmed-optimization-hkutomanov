@@ -1,60 +1,57 @@
-# configs/tune_grid.yaml
-# Hyperparameter grid for solver tuning experiments.
-# Only solver-related parameters are enumerated here.
+﻿# configs/tune_grid.yaml
 
+# 1. (Из Эпика) На каких датасетах запускать
+datasets:
+  #- data/input/synthetic_1d_1r.csv
+  - data/input/synthetic_2d_2r.csv
+  #- data/input/synthetic_3d_8r.csv
+
+# 2. (Из Эпика) Цель для 7.3.3 (select_best_config.py)
+#    (Как вы и предложили, меняем на 'utilization'
+#     и 'runtime_sec' будет вторичной метрикой)
+objective_primary: "utilization"
+objective_primary_goal: "maximize"
+objective_secondary: "runtime_sec"
+objective_secondary_goal: "minimize"
+
+repeats: 1
+
+# 3. (Из Эпика) Управление тюнером
+tuning:
+  strategy: "grid" # Полный перебор
+
+# 4. ФИКСИРОВАННЫЙ КОНТЕКСТ
+#    Эти параметры НЕ перебираются, но ПЕРЕКРЫВАЮТ
+#    config.yaml для ВСЕХ запусков.
+context:
+  # --- Фиксируем лимиты и константы ---
+  solver.max_time_in_seconds: 60    # Даем каждому запуску 1 минуту
+  solver.random_seed: 42            # Для воспроизводимости
+  solver.num_workers: 8
+
+  # --- Зафиксировали buffer (как вы указали) ---
+  buffer: 0.25                      #
+
+# 5. СЕТКА ПЕРЕБОРА (GRID)
+#    Ключи должны полностью совпадать с config.yaml
+
+# 5.1 Модельные параметры (из корня config.yaml)
+model:
+  grid:
+    # (default=1, int)
+    activation_penalty: [0, 1, 5, 10]
+
+# 5.2 Параметры решателя (из solver: в config.yaml)
 solver:
   grid:
-    # Parallelism
-    num_workers: [1, 4, 8]
-
-    # Time budget per run (seconds)
-    max_time_in_seconds: [15, 30, 60]
-
-    # Search strategy
+    # Стратегия поиска
     search_branching: ["AUTOMATIC", "PORTFOLIO", "FIXED_SEARCH"]
 
-    # Stochasticity / reproducibility
-    random_seed: [0, 42, 1337]
-
-    # Presolve / linearization
-    cp_model_presolve: [true, false]
-    linearization_level: [0, 1, 2]
-
-    # Stop criteria / optimality gap
+    # Искать оптимум или остановиться на первом?
     stop_after_first_solution: [false, true]
-    relative_gap_limit: [0.0, 0.01, 0.05]
 
-    # Heuristic and resource controls
-    use_optional_variables: [true, false]
-    search_randomization_tolerance: [0.0, 0.1, 0.3]
-    max_num_conflicts: [100000, 1000000]
-    max_num_branches: [100000, 1000000]
-    max_memory_in_mb: [2048, 4096, 8192]
-    max_delta: [0.0, 0.01]
-    absolute_gap_limit: [0.0, 0.001]
-    use_sat_inprocessing: [true, false]
-    stop_after_presolve: [false, true]
+    # Предобработка модели
+    cp_model_presolve: [true, false]
 
-  fixed:
-    # Keep logs for post-hoc analysis
-    log_to_stdout: true
-
-# Optional run-level controls for the tuner (not passed to solver directly)
-tuning:
-  strategy: "grid"        # grid | random
-  max_runs: 100           # safety cap if strategy=random
-  shuffle_grid: false     # randomize evaluation order for load balancing
-  concurrent_trials: 1    # external parallelism of the tuner (not num_workers)
-
-# Optional constant model context during tuning (do not sweep these)
-context:
-  time_unit: 0.0833333333
-  rooms_max: 20
-  shift_min: 5.0
-  shift_max: 12.0
-  shift_overtime: 9.0
-  overtime_multiplier: 1.5
-  buffer: 0.25
-  utilization_target: 0.80
-  enforce_surgery_duration_limit: true
-  timezone: "UTC"
+    # Уровень линеаризации
+    linearization_level: [0, 1]
