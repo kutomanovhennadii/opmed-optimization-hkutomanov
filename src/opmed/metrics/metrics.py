@@ -21,9 +21,56 @@ def collect_metrics(result: dict[str, Any], cfg: Any) -> dict[str, Any]:
     """
     _require_result_schema(result)
 
-    status = str(result["status"])
-    total_cost = float(result.get("objective", 0.0))
-    runtime_sec = float(result.get("runtime", 0.0))
+    status = str(result.get("status", "UNKNOWN") or "UNKNOWN")
+
+    assignments = result.get("assignments")
+    if not assignments:
+        # Нет решения → возвращаем пустой отчёт без вызова _load_schedule_dataframe()
+        runtime_raw = result.get("runtime", 0.0)
+        runtime_sec = (
+            float(runtime_raw)
+            if isinstance(runtime_raw, (int | float | str)) and runtime_raw not in (None, "")
+            else 0.0
+        )
+
+        solver_info = {
+            "engine": "CP-SAT",
+            "num_workers": int(getattr(getattr(cfg, "solver", object()), "num_workers", 0)),
+            "seed": int(getattr(getattr(cfg, "solver", object()), "random_seed", 0)),
+        }
+        try:
+            solver_info["version"] = getattr(ortools, "__version__", "unknown")
+        except Exception:
+            pass
+
+        metrics = {
+            "timestamp": _utc_now_iso(),
+            "solver_status": status,
+            "total_cost": 0.0,
+            "utilization": 0.0,
+            "runtime_sec": runtime_sec,
+            "num_anesthetists": 0,
+            "num_rooms_used": 0,
+            "num_surgeries": 0,
+            "solver": solver_info,
+        }
+
+        json.dumps(metrics, ensure_ascii=False)
+        return metrics
+
+    objective_raw = result.get("objective", 0.0)
+    total_cost = (
+        float(objective_raw)
+        if isinstance(objective_raw, (int | float | str)) and objective_raw not in (None, "")
+        else 0.0
+    )
+
+    runtime_raw = result.get("runtime", 0.0)
+    runtime_sec = (
+        float(runtime_raw)
+        if isinstance(runtime_raw, (int | float | str)) and runtime_raw not in (None, "")
+        else 0.0
+    )
 
     # Получаем датафрейм расписания (нужен для utilization и счётчиков)
     df = _load_schedule_dataframe(result)
@@ -66,19 +113,26 @@ def collect_metrics(result: dict[str, Any], cfg: Any) -> dict[str, Any]:
 
 
 def _require_result_schema(result: dict[str, Any]) -> None:
-    required = ["status", "objective", "runtime", "assignment"]
+    # поддержка нового ключа "assignments" и обратная совместимость со старым "assignment"
+    if "assignments" not in result and "assignment" in result:
+        result["assignments"] = result["assignment"]
+
+    required = ["status", "objective", "runtime", "assignments"]
     missing = [k for k in required if k not in result]
     if missing:
         raise DataError(
             f"Missing SolveResult keys: {', '.join(missing)}",
             source="metrics.collect_metrics",
-            suggested_action="Ensure Optimizer returns the standard result dictionary.",
+            suggested_action="Ensure Optimizer returns the standard result dictionary with 'assignments'.",
         )
-    if not isinstance(result["assignment"], dict):
+
+    # assignments может быть dict (x/y) или уже list[SolutionRow]
+    val = result["assignments"]
+    if not isinstance(val, (dict | list)):
         raise DataError(
-            "result['assignment'] must be a dict",
+            "result['assignments'] must be a dict or list of SolutionRow.",
             source="metrics.collect_metrics",
-            suggested_action="Return {'x': [...], 'y': [...]} as described in solvercore.md.",
+            suggested_action="Return {'x': [...], 'y': [...]} or structured SolutionRow list.",
         )
 
 

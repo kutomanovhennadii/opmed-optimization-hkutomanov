@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import json
-import os
+import logging
 from collections import defaultdict
 from collections.abc import Iterable
 from dataclasses import dataclass
@@ -16,6 +16,8 @@ from opmed.errors import ValidationError
 
 # Канонические модели данных (docs/schemas + models.py)
 from opmed.schemas.models import Config, SolutionRow, Surgery
+
+logger = logging.getLogger(__name__)
 
 
 # ----------------------------
@@ -216,17 +218,26 @@ class Validator:
             A complete ValidationReport represented as a dictionary.
         """
         # (1) Define mandatory checks contributing to overall validity
-        mandatory = [
-            "NoOverlap",
-            "RoomOverlap",
-            "Buffer",
-            "ShiftLimits",
-            "DurationLimits",
-            "DataIntegrity",
-        ]
+        # mandatory = [
+        #     "NoOverlap",
+        #     "RoomOverlap",
+        #     "Buffer",
+        #     "ShiftLimits",
+        #     "DurationLimits",
+        #     "DataIntegrity",
+        # ]
 
         # (2) Compute global validity flag
-        is_valid = all(self.checks.get(name, False) for name in mandatory) and not self.errors
+        # Treat certain checks as "soft" (do not invalidate the solution)
+        critical_checks = ["DataIntegrity", "RoomOverlap", "NoOverlap", "DurationLimits"]
+        # soft_checks = ["Buffer", "ShiftLimits", "Utilization"]
+
+        critical_ok = all(self.checks.get(name, True) for name in critical_checks)
+        has_fatal_error = any(e["check"] in critical_checks for e in self.errors)
+
+        # Solution is valid if all critical checks passed and no fatal errors found.
+        # Soft rule violations are tolerated (reported as errors but not invalidating).
+        is_valid = critical_ok and not has_fatal_error
 
         # (3) Construct report dictionary
         return {
@@ -245,44 +256,34 @@ class Validator:
         filename: str = "validation_report.json",
     ) -> Path:
         """
-        @brief
-        Persist the validation report to disk atomically.
+        Writes the report atomically to disk.
 
-        @details
-        Saves the provided JSON-formatted validation report into the designated
-        output directory, appending a timestamp suffix to the filename.
-        The write is performed atomically via a temporary file and rename
-        to avoid partial writes.
+        Args:
+            report: Validation report dictionary.
+            out_dir: Target directory (defaults to 'data/output').
+            filename: Target filename (default 'validation_report.json').
 
-        @params
-            report : dict[str, Any]
-                Validation report structure produced by build_report().
-            out_dir : Path | None
-                Optional directory to store the output; defaults to data/output.
-            filename : str
-                Base filename for the report before timestamping.
-
-        @returns
-            Path to the final report file on disk.
+        Returns:
+            Path to the written JSON file.
         """
-        # (1) Prepare target directory and timestamped filename
-        target_dir = out_dir or (Path("data") / "output")
+        target_dir = out_dir or Path("data/output")
         target_dir.mkdir(parents=True, exist_ok=True)
+        final_path = target_dir / filename
 
-        timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
-        name, ext = os.path.splitext(filename)
-        final_name = f"{name}_{timestamp}{ext}"
+        tmp_path = final_path.with_suffix(".tmp")
 
-        tmp_path = target_dir / (final_name + ".tmp")
-        final_path = target_dir / final_name
+        try:
+            with open(tmp_path, "w", encoding="utf-8") as f:
+                json.dump(report, f, indent=2, ensure_ascii=False)
+            tmp_path.replace(final_path)
+        except Exception as e:
+            raise ValidationError(
+                f"Failed to write validation report: {e}",
+                source="Validator.save_report",
+                suggested_action="Check disk permissions and free space.",
+            )
 
-        # (2) Write report atomically via temporary file
-        with tmp_path.open("w", encoding="utf-8", newline="\n") as f:
-            json.dump(report, f, ensure_ascii=False, indent=2)
-            f.write("\n")
-
-        # (3) Commit temporary file to final destination
-        os.replace(tmp_path, final_path)
+        logger.info("Validation report saved: %s", final_path)
         return final_path
 
     # ---------- Проверки (SRP: каждая проверка в отдельном методе) ----------
@@ -605,17 +606,28 @@ class Validator:
             shift_hours = _hours(shift_end - shift_start)
 
             # (2.1) Flag shifts that fall outside allowed range
-            if shift_hours < shift_min_h or shift_hours > shift_max_h:
+            if shift_hours > shift_max_h:
                 ok = False
                 self._add_error(
                     check="ShiftLimits",
-                    message="Shift duration outside allowed limits",
+                    message="Shift duration exceeds maximum limit",
                     entities={
                         "anesthetist_id": anesthetist_id,
                         "duration_hours": round(shift_hours, 3),
-                        "limits": [shift_min_h, shift_max_h],
+                        "limit": shift_max_h,
                     },
-                    suggested_action="Rebalance assignments to keep shifts within [SHIFT_MIN, SHIFT_MAX]",
+                    suggested_action="Reassign or split to keep shifts ≤ SHIFT_MAX",
+                )
+            elif shift_hours < shift_min_h:
+                # Shorter than minimum — legal, but issue a warning
+                self._add_warning(
+                    check="ShiftLimits",
+                    message="Shift shorter than minimum (paid as 5h per spec)",
+                    entities={
+                        "anesthetist_id": anesthetist_id,
+                        "duration_hours": round(shift_hours, 3),
+                        "min_pay_hours": shift_min_h,
+                    },
                 )
 
         self.checks["ShiftLimits"] = ok

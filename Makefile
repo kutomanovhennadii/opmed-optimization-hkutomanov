@@ -41,7 +41,7 @@ schemas:
 
 # Запуск основного пайплайна
 run:
-	$(PYTHON) scripts/run.py --config configs/config.yaml --surgeries data/input/surgeries.csv --outdir data/output
+	poetry run python scripts/run.py --config config/config.yaml --input data/input/synthetic_3d_8r.csv --output data/output
 
 # Тюнинг гиперпараметров
 tune:
@@ -56,3 +56,8 @@ clean:
 
 # Комплексная проверка (формат, линтер, тесты, хуки)
 check: fmt lint test
+
+
+.PHONY: gendata
+gendata:
+	poetry run python -m scripts.gen_synthetic_data

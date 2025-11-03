@@ -138,6 +138,27 @@ class VisualConfig(BaseModel):
     dpi: int = Field(150, description="Output figure DPI")
 
 
+class ExperimentConfig(BaseModel):
+    name: str | None = None
+    description: str | None = None
+    tags: list[str] | None = None
+
+
+class ValidationConfig(BaseModel):
+    write_report: bool = True
+    fail_on_warnings: bool = False
+
+
+class MetricsConfig(BaseModel):
+    save_metrics: bool = True
+    save_solver_log: bool = True
+
+
+class VisualizationConfig(BaseModel):
+    save_plot: bool = True
+    dpi: int = 120
+
+
 class Config(_StrictBaseModel):
     """
     Runtime configuration loaded from config.yaml.
@@ -171,6 +192,15 @@ class Config(_StrictBaseModel):
     timezone: str = Field("UTC", description="IANA timezone name, e.g. 'UTC'")
     solver: SolverConfig = Field(default_factory=SolverConfig.model_construct)
     visual: VisualConfig = Field(default_factory=VisualConfig.model_construct)
+
+    # --- новые поля для поддержки YAML ---
+    surgeries_csv: str | None = None
+    output_dir: str | None = "data/output"
+    io_policy: IOPolicy = Field(default_factory=IOPolicy.model_construct)
+    validation: ValidationConfig = Field(default_factory=ValidationConfig.model_construct)
+    metrics: MetricsConfig = Field(default_factory=MetricsConfig.model_construct)
+    visualization: VisualizationConfig = Field(default_factory=VisualizationConfig.model_construct)
+    experiment: ExperimentConfig = Field(default_factory=ExperimentConfig.model_construct)
 
 
 class SolutionRow(_StrictBaseModel):

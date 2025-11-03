@@ -51,33 +51,59 @@ class OptimizerCore:
         Returns:
             Tuple of (SolveResult, solver instance, runtime seconds).
         """
+        logger.debug("Starting CP-SAT solve() with bundle keys: %s", list(bundle.keys()))
+
         # (1) Create solver instance and apply configuration parameters
         solver = self._make_solver()
+        logger.debug("Solver instance created: %s", solver.__class__.__name__)
+
         self._apply_parameters(solver)
+        logger.debug("Solver parameters applied: %s", solver.parameters)
 
         # (2) Measure runtime while solving
         t0 = time.perf_counter()
+        logger.info("Solving CP-SAT model…")
         status_code = self._solve_model(solver, bundle["model"])
         t1 = time.perf_counter()
         runtime = t1 - t0
+        logger.info("CP-SAT solve completed in %.3f seconds", runtime)
 
         # (3) Decode solver status and prepare placeholders
         status = self._status_name(status_code)
         objective_value: float | None = None
         assignment: dict[str, Any] = {"x": [], "y": []}
 
+        logger.debug("Solver returned status code %s → %s", status_code, status)
+
         # (4) If solution is feasible/optimal → extract assignments and objective
         if status_code in (cp_model.OPTIMAL, cp_model.FEASIBLE):
+            logger.debug("Feasible/Optimal solution detected. Extracting assignments…")
             assignment = self._extract_assignments(solver, bundle)
             objective_value = solver.ObjectiveValue()
+            logger.debug(
+                "Objective value = %.4f; extracted x=%d, y=%d assignments",
+                objective_value or -1,
+                len(assignment.get("x", [])),
+                len(assignment.get("y", [])),
+            )
+        else:
+            logger.warning("No feasible solution found (status=%s)", status)
 
         # (5) Construct final result dictionary
         result: SolveResult = {
-            "assignment": assignment,
+            "assignments": assignment,
             "status": status,
             "objective": objective_value,
             "runtime": runtime,
         }
+
+        logger.debug(
+            "Final SolveResult: status=%s, objective=%s, runtime=%.3fs",
+            status,
+            objective_value,
+            runtime,
+        )
+
         return result, solver, runtime
 
     # -------------------- Internal helpers (pure logic) --------------------

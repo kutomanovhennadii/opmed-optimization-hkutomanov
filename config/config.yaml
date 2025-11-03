@@ -11,7 +11,7 @@ overtime_multiplier: 1.5
 buffer: 0.25               # 15 minutes between rooms for the same anesthesiologist
 utilization_target: 0.80
 enforce_surgery_duration_limit: true  # reject surgeries > shift_max
-activation_penalty: 0.00  # weight (penalty) added to the objective function for each active anesthesiologist; 0 disables this term
+activation_penalty: 1  # weight (penalty) added to the objective function for each active anesthesiologist; 0 disables this term
 
 
 # --- Timezone context for I/O parsing/formatting (IANA name) ---

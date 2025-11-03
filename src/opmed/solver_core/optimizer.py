@@ -1,6 +1,6 @@
 ﻿from __future__ import annotations
 
-from opmed.schemas.models import Config
+from opmed.schemas.models import Config, SolutionRow
 from opmed.solver_core.optimizer_core import CpSatModelBundle, OptimizerCore, SolveResult
 from opmed.solver_core.result_store import ResultStore
 
@@ -33,29 +33,60 @@ class Optimizer:
         self._store = ResultStore(cfg)
 
     def solve(self, bundle: CpSatModelBundle) -> SolveResult:
-        """
-        Executes full optimization flow:
-            1. Runs the CP-SAT solver via OptimizerCore
-            2. Persists results and artifacts via ResultStore
-
-        Args:
-            bundle: Model bundle containing CpModel and variables.
-
-        Returns:
-            Final SolveResult dictionary, possibly extended with 'solution_path'.
-        """
-        # (1) Run solver and capture result, solver instance, and runtime
+        """Executes the solver and returns enriched SolveResult."""
         result, solver, runtime = self._core.solve(bundle)
 
-        # (2) Extract variable assignments from result (if any)
-        assignment = result.get("assignment")
+        # 1️⃣ Преобразовать индексы в структурированные строки расписания
+        structured = self._to_solution_rows(result.get("assignments"), bundle)
 
-        # (3) Persist artifacts and logs based on I/O policy, return final result
+        # 2️⃣ Сохранить артефакты
         final_result = self._store.persist(
-            result=result,
+            result={**result, "assignments": structured},
             solver=solver,
             runtime=runtime,
             bundle=bundle,
-            assignment=assignment if assignment else None,
+            assignment=result.get("assignments"),
         )
+
+        # 3️⃣ Вернуть итог с готовыми SolutionRow
+        final_result["assignments"] = structured
+        final_result["solution_rows"] = [row.model_dump() for row in structured]
         return final_result
+
+    def _to_solution_rows(
+        self,
+        assignments: dict[str, list[tuple[int, int]]] | None,
+        bundle: CpSatModelBundle,
+    ) -> list[SolutionRow]:
+        """
+        Converts index-based assignments into canonical SolutionRow objects.
+
+        Args:
+            assignments: Dict like {"x": [(s,a)], "y": [(s,r)]}.
+            bundle: Model bundle containing surgeries list.
+
+        Returns:
+            List of SolutionRow ready for validation/visualization/export.
+        """
+        if not assignments:
+            return []
+
+        surgeries = bundle.get("surgeries", [])
+        rows: list[SolutionRow] = []
+
+        for s_idx, a_idx in assignments.get("x", []):
+            surgery = surgeries[s_idx]
+            # Находим комнату по индексу операции, если есть
+            r_match = next((r_idx for (s, r_idx) in assignments.get("y", []) if s == s_idx), None)
+            room_id = f"R{r_match}" if r_match is not None else "R0"
+
+            rows.append(
+                SolutionRow(
+                    surgery_id=surgery.surgery_id,
+                    start_time=surgery.start_time,
+                    end_time=surgery.end_time,
+                    anesthetist_id=f"A{a_idx}",
+                    room_id=room_id,
+                )
+            )
+        return rows
