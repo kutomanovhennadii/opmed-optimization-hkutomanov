@@ -11,31 +11,38 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # 1. Checkout repository
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      # 2. Set up Python
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
-      - name: Cache pip
+      # 3. Cache Poetry dependencies
+      - name: Cache Poetry
         uses: actions/cache@v4
         with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('pyproject.toml') }}
+          path: ~/.cache/pypoetry
+          key: ${{ runner.os }}-poetry-${{ hashFiles('poetry.lock') }}
           restore-keys: |
-            ${{ runner.os }}-pip-
+            ${{ runner.os }}-poetry-
 
+      # 4. Install Poetry
+      - name: Install Poetry
+        run: pip install poetry
+
+      # 5. Install project dependencies (including dev group)
       - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -e .[dev]
+        run: poetry install --with dev
 
+      # 6. Run pytest with coverage
       - name: Run pytest
-        run: |
-          pytest -q --cov=opmed --cov-report=xml --junitxml=junit.xml
+        run: poetry run pytest -q --cov=opmed --cov-report=xml --junitxml=junit.xml
 
+      # 7. Upload coverage report as artifact
       - name: Upload coverage report
         if: always()
         uses: actions/upload-artifact@v4
@@ -43,6 +50,7 @@ jobs:
           name: coverage-report
           path: coverage.xml
 
+      # 8. Upload JUnit test results as artifact
       - name: Upload junit results
         if: always()
         uses: actions/upload-artifact@v4
