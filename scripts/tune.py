@@ -40,7 +40,7 @@ except ImportError:
 
 # Set this flag to True to switch to the stress tuning configuration.
 # False uses the default/medium tuning configuration.
-IS_STRESS_TUNE: bool = True
+IS_STRESS_TUNE: bool = False
 
 # Default (IS_STRESS_TUNE = False) Paths
 DEFAULT_BASE_CONFIG_PATH = Path("config/config.yaml")
