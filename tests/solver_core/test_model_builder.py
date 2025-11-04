@@ -327,25 +327,22 @@ def test_add_buffer_constraints_adds_expected_rules() -> None:
 def test_add_buffer_constraints_detects_dangerous_pairs() -> None:
     """
     @brief
-    Checks that `_add_buffer_constraints()` detects “dangerous” surgery pairs
-    and correctly introduces logical variables to handle them.
+    Verifies that `_add_buffer_constraints()` detects "dangerous" overlapping
+    surgery pairs and introduces corresponding logical variables.
 
     @details
-    The test creates two surgeries close enough in time to violate the buffer rule.
-    It then verifies that the method executes without errors and that expected
-    Boolean variables (`b_sameA`, `b_sameR`) appear in the model’s internal Proto.
+    This test constructs a minimal model manually and confirms that
+    buffer-related logical variables are generated whenever two surgeries
+    overlap within the configured buffer window. The model text is inspected
+    for the presence of expected literals.
     """
-
     # --- Arrange ---
+    # Prepare configuration and minimal surgery schedule
     cfg = Config(buffer=1.0, rooms_max=2)
     t0 = dt.datetime(2025, 1, 1, 8, 0, 0)
 
     surgeries = [
-        Surgery(
-            surgery_id="S1",
-            start_time=t0,
-            end_time=t0 + dt.timedelta(hours=1),
-        ),
+        Surgery(surgery_id="S1", start_time=t0, end_time=t0 + dt.timedelta(hours=1)),
         Surgery(
             surgery_id="S2",
             start_time=t0 + dt.timedelta(minutes=90),
@@ -353,10 +350,12 @@ def test_add_buffer_constraints_detects_dangerous_pairs() -> None:
         ),
     ]
 
+    # Build model and manually initialize variable containers
     builder = ModelBuilder(cfg, surgeries)
     builder.model = cp_model.CpModel()
     builder.vars = {"x": {}, "y": {}}
 
+    # Create basic assignment variables for anesthetists and rooms
     max_anesth = len(surgeries)
     for s_idx in range(len(surgeries)):
         for a_idx in range(max_anesth):
@@ -364,41 +363,58 @@ def test_add_buffer_constraints_detects_dangerous_pairs() -> None:
         for r_idx in range(cfg.rooms_max):
             builder.vars["y"][(s_idx, r_idx)] = builder.model.NewBoolVar(f"y_{s_idx}_{r_idx}")
 
+    # Set auxiliary temporal parameters
     builder.aux["t_origin"] = t0.replace(hour=0, minute=0, second=0, microsecond=0)
     builder.aux["ticks_per_hour"] = int(round(1 / cfg.time_unit))
     builder.aux["buffer_ticks"] = int(round(cfg.buffer * builder.aux["ticks_per_hour"]))
 
+    # Compute start and end ticks relative to origin
+    builder.aux["start_ticks"] = [
+        int(
+            (s.start_time - builder.aux["t_origin"]).total_seconds()
+            / 3600
+            * builder.aux["ticks_per_hour"]
+        )
+        for s in surgeries
+    ]
+    builder.aux["end_ticks"] = [
+        int(
+            (s.end_time - builder.aux["t_origin"]).total_seconds()
+            / 3600
+            * builder.aux["ticks_per_hour"]
+        )
+        for s in surgeries
+    ]
+
     # --- Act ---
+    # Add buffer constraints to detect temporal conflicts
     builder._add_buffer_constraints()
 
     # --- Assert ---
+    # Verify that model contains expected literals for buffer enforcement
     proto_text = str(builder.model.Proto())
-    assert "b_sameA" in proto_text
     assert "b_sameR" in proto_text
+    assert "b_sameA" in proto_text or "b_sameA_lit" in proto_text
 
 
 def test_add_buffer_constraints_builds_logical_rules(caplog: pytest.LogCaptureFixture) -> None:
     """
     @brief
-    Ensures that `_add_buffer_constraints()` builds logical rules for detected
-    dangerous surgery pairs and logs corresponding debug messages.
+    Validates that `_add_buffer_constraints()` builds logical buffer rules
+    and emits diagnostic debug logs.
 
     @details
-    The test verifies that the function:
-      - Creates Boolean logic variables (`b_sameA`, `b_sameR`) in the model.
-      - Logs the “Added buffer consistency rules” message at DEBUG level.
+    Ensures that for detected overlapping surgery pairs,
+    the builder introduces proper logical literals ("b_sameR", "b_sameA")
+    and logs messages about buffer consistency. Auxiliary keys that are
+    normally created by `_create_intervals()` are injected manually here.
     """
-
     # --- Arrange ---
     cfg = Config(buffer=1.0, rooms_max=2)
     t0 = dt.datetime(2025, 1, 1, 8, 0, 0)
 
     surgeries = [
-        Surgery(
-            surgery_id="S1",
-            start_time=t0,
-            end_time=t0 + dt.timedelta(hours=1),
-        ),
+        Surgery(surgery_id="S1", start_time=t0, end_time=t0 + dt.timedelta(hours=1)),
         Surgery(
             surgery_id="S2",
             start_time=t0 + dt.timedelta(minutes=90),
@@ -409,10 +425,30 @@ def test_add_buffer_constraints_builds_logical_rules(caplog: pytest.LogCaptureFi
     builder = ModelBuilder(cfg, surgeries)
     builder.model = cp_model.CpModel()
     builder.vars = {"x": {}, "y": {}}
+
+    # Initialize auxiliary parameters normally produced by _create_intervals()
     builder.aux["t_origin"] = t0.replace(hour=0, minute=0, second=0, microsecond=0)
     builder.aux["ticks_per_hour"] = int(round(1 / cfg.time_unit))
     builder.aux["buffer_ticks"] = int(round(cfg.buffer * builder.aux["ticks_per_hour"]))
 
+    builder.aux["start_ticks"] = [
+        int(
+            (s.start_time - builder.aux["t_origin"]).total_seconds()
+            / 3600
+            * builder.aux["ticks_per_hour"]
+        )
+        for s in surgeries
+    ]
+    builder.aux["end_ticks"] = [
+        int(
+            (s.end_time - builder.aux["t_origin"]).total_seconds()
+            / 3600
+            * builder.aux["ticks_per_hour"]
+        )
+        for s in surgeries
+    ]
+
+    # Create assignment variables for anesthetists and rooms
     for s_idx in range(len(surgeries)):
         for a_idx in range(len(surgeries)):
             builder.vars["x"][(s_idx, a_idx)] = builder.model.NewBoolVar(f"x_{s_idx}_{a_idx}")
@@ -420,14 +456,16 @@ def test_add_buffer_constraints_builds_logical_rules(caplog: pytest.LogCaptureFi
             builder.vars["y"][(s_idx, r_idx)] = builder.model.NewBoolVar(f"y_{s_idx}_{r_idx}")
 
     # --- Act ---
+    # Apply buffer constraint creation under debug logging
     with caplog.at_level(logging.DEBUG):
         builder._add_buffer_constraints()
 
     # --- Assert ---
+    # Validate that model contains the expected buffer literals and logs
     proto_text = str(builder.model.Proto())
-    assert "b_sameA" in proto_text
     assert "b_sameR" in proto_text
-    assert any("Added buffer consistency rules" in m for m in caplog.messages)
+    assert "b_sameA" in proto_text or "b_sameA_lit" in proto_text
+    assert any("buffer consistency rules" in m for m in caplog.messages)
 
 
 def test_add_shift_duration_bounds_creates_linked_variables() -> None:

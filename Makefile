@@ -37,7 +37,7 @@ schemas:
 
 # Run the main pipeline
 run:
-	poetry run python -m scripts.run --config config/config.yaml --input data/input/synthetic_3d_8r.csv --output data/output
+	poetry run python -m scripts.run --config config/config.yaml --input data/input/synthetic_2d_2r.csv --output data/output
 
 # --- Epic 7: Tuning (Task 7.3.4) ---
 

@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import json
-import re
 from datetime import datetime, timezone
 from pathlib import Path
 from types import SimpleNamespace
@@ -619,21 +618,13 @@ def test_raises_validation_error_on_empty_assignments() -> None:
 # -----------------------------
 def test_smoke_valid_and_report_file_written(tmp_path: Path) -> None:
     """
-    @brief
     End-to-end smoke test for a valid scheduling scenario.
-
-    @details
-    Builds a consistent set of surgeries and assignments with all
-    constraints satisfied. Ensures that the validator marks the result
-    as valid, writes the report to disk, and produces a properly
-    timestamped JSON file.
     """
     cfg = Config(utilization_target=0.8, buffer=0.25, shift_min=5.0, shift_max=12.0)
 
-    # One anesthetist, 5-hour shift, total surgery duration ~4.5h → utilization ~0.9
-    s1 = mk_surgery("S1", dt(8, 0), dt(9, 30))  # 1.5h
-    s2 = mk_surgery("S2", dt(9, 45), dt(11, 45))  # 2.0h
-    s3 = mk_surgery("S3", dt(12, 0), dt(13, 0))  # 1.0h
+    s1 = mk_surgery("S1", dt(8, 0), dt(9, 30))
+    s2 = mk_surgery("S2", dt(9, 45), dt(11, 45))
+    s3 = mk_surgery("S3", dt(12, 0), dt(13, 0))
     surgeries = [s1, s2, s3]
     assignments = [
         mk_assignment("S1", s1.start_time, s1.end_time, "A1", "R1"),
@@ -641,12 +632,10 @@ def test_smoke_valid_and_report_file_written(tmp_path: Path) -> None:
         mk_assignment("S3", s3.start_time, s3.end_time, "A1", "R1"),
     ]
 
-    # --- Act ---
     v = Validator(assignments, surgeries, cfg)
     v.run_all_checks()
     report = v.build_report()
 
-    # --- Assert (in-memory validation) ---
     assert report["valid"] is True
     assert all(
         report["checks"][k]
@@ -660,22 +649,15 @@ def test_smoke_valid_and_report_file_written(tmp_path: Path) -> None:
         ]
     )
 
-    # --- Act (write report to disk) ---
     path = v.save_report(report, out_dir=tmp_path)
 
-    # --- Assert (file existence and validity) ---
+    # --- Assertions ---
     assert path.exists()
     assert path.parent == tmp_path
-    assert path.name.startswith("validation_report_")
-    assert path.name.endswith(".json")
+    assert path.name == "validation_report.json"
 
-    # File must be valid JSON
     loaded = json.loads(path.read_text(encoding="utf-8"))
     assert loaded["valid"] is True
-
-    # Verify timestamp pattern in filename (YYYYMMDD_HHMMSS)
-    m = re.match(r"validation_report_\d{8}_\d{6}\.json", path.name)
-    assert m is not None
 
 
 # -----------------------------
@@ -684,14 +666,14 @@ def test_smoke_valid_and_report_file_written(tmp_path: Path) -> None:
 def test_facade_validate_assignments_writes_file(tmp_path: Path) -> None:
     """
     @brief
-    Verify facade validate_assignments() writes JSON report when enabled.
+    Verifies that the facade function validate_assignments() writes a JSON report when enabled.
 
     @details
-    Runs the top-level helper with write_report=True and ensures that
-    a timestamped validation_report_*.json file is created and marked valid.
+    Ensures that the validation result is correct, and a file named
+    'validation_report.json' (without timestamp) is created in the output directory.
     """
     # --- Arrange ---
-    cfg = Config(shift_min=1.0)  # minimal shift to make one surgery valid
+    cfg = Config(shift_min=1.0)
     s1 = mk_surgery("S1", dt(8, 0), dt(9, 0))
     surgeries = [s1]
     assignments = [mk_assignment("S1", s1.start_time, s1.end_time, "A1", "R1")]
@@ -702,6 +684,9 @@ def test_facade_validate_assignments_writes_file(tmp_path: Path) -> None:
     # --- Assert ---
     assert report["valid"] is True
 
-    files = list(tmp_path.glob("validation_report_*.json"))
+    # Verify that validation_report.json (without timestamp) has been written
+    files = list(tmp_path.glob("validation_report.json"))
     assert len(files) == 1
-    assert files[0].exists()
+
+    loaded = json.loads(files[0].read_text(encoding="utf-8"))
+    assert loaded["valid"] is True

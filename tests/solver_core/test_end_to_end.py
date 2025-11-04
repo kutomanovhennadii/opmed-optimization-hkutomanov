@@ -4,7 +4,7 @@ import json
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-import opmed.solver_core.result_store as result_store_mod  # для monkeypatch
+import opmed.solver_core.result_store as result_store_mod
 from opmed.schemas.models import Config, Surgery
 from opmed.solver_core.model_builder import ModelBuilder
 from opmed.solver_core.optimizer import Optimizer

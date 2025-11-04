@@ -10,18 +10,18 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
-# Единая система ошибок (ADR-008)
-# Ожидается, что в проекте есть src/opmed/errors.py с классом ValidationError
+# Unified error system (ADR-008)
+# The project is expected to contain src/opmed/errors.py with class ValidationError
 from opmed.errors import ValidationError
 
-# Канонические модели данных (docs/schemas + models.py)
+# Canonical data models (docs/schemas + models.py)
 from opmed.schemas.models import Config, SolutionRow, Surgery
 
 logger = logging.getLogger(__name__)
 
 
 # ----------------------------
-# ВСПОМОГАТЕЛЬНЫЕ СТРУКТУРЫ/ФУНКЦИИ
+# AUXILIARY STRUCTURES / FUNCTIONS
 # ----------------------------
 @dataclass(frozen=True)
 class Interval:
@@ -30,15 +30,15 @@ class Interval:
     Lightweight container representing a single time interval.
 
     @details
-    Holds start and end timestamps along with an identifier of the surgery
+    Holds start and end timestamps together with the surgery identifier
     and optional contextual metadata (e.g., room_id, anesthetist_id).
-    Used in local validation and overlap checks.
+    Used for local validation and overlap detection within the model builder.
     """
 
     start: datetime
     end: datetime
     surgery_id: str
-    extra: dict[str, Any]  # e.g. {"room_id": "..."} or {"anesthetist_id": "..."}
+    extra: dict[str, Any]  # e.g., {"room_id": "..."} or {"anesthetist_id": "..."}
 
 
 def _ensure_timezone(dt: datetime) -> datetime:
@@ -113,8 +113,8 @@ def _sorted_intervals(rows: Iterable[SolutionRow], extra: dict[str, Any]) -> lis
     return intervals
 
 
-# ----------------------------
-# КЛАСС ВАЛИДАТОРА (инстанс-ядро)
+# ---------------------------
+# VALIDATOR CLASS (instance core)
 # ----------------------------
 class Validator:
     """
@@ -286,7 +286,7 @@ class Validator:
         logger.info("Validation report saved: %s", final_path)
         return final_path
 
-    # ---------- Проверки (SRP: каждая проверка в отдельном методе) ----------
+    # ---------- Checks (SRP: each check in a separate method) ----------
     def _check_data_integrity(self) -> None:
         """
         @brief
@@ -757,7 +757,7 @@ class Validator:
         # (6) Record total count of detected violations
         self.metrics["num_violations"] = len(self.errors)
 
-    # ---------- Утилиты для набора диагностики ----------
+    # ---------- Utilities for diagnostic kit ----------
     def _add_error(
         self,
         check: str,
@@ -833,7 +833,7 @@ class Validator:
 
 
 # ----------------------------
-# ТОНКИЙ ФАСАД (статический сценарный вызов)
+# THIN FACADE (static script call)
 # ----------------------------
 def validate_assignments(
     assignments: list[SolutionRow],

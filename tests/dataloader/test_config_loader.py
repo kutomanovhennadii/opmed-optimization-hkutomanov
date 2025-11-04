@@ -12,7 +12,22 @@ from opmed.schemas.models import Config
 
 @pytest.fixture()
 def tmp_yaml(tmp_path: Path) -> Path:
-    """Создаёт временный YAML с корректными полями Config."""
+    """
+    @brief
+    Creates a temporary YAML configuration file with valid Config fields.
+
+    @details
+    Generates a minimal config.yaml containing essential parameters
+    such as time_unit, room limits, shift bounds, and basic solver options.
+    Returns the file path for use in tests or temporary runs.
+
+    @params
+        tmp_path : Path
+            Temporary directory provided by pytest fixture.
+
+    @returns
+        Path to the generated YAML configuration file.
+    """
     path = tmp_path / "config.yaml"
     cfg = {
         "time_unit": 0.0833,

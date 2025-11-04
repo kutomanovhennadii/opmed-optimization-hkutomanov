@@ -1,0 +1,41 @@
+﻿# configs/tune_grid_stress.yaml
+# Focus tuning for complex/stress scenarios (e.g., 3 days, 20 rooms).
+
+# 1. Datasets (Your new stress data)
+datasets:
+  - data/input/synthetic_3d_16r.csv # Your new stress data goes here
+
+# 2. Objectives (Keep the same optimization criteria)
+objective_primary: "utilization"
+objective_primary_goal: "maximize"
+objective_secondary: "runtime_sec"
+objective_secondary_goal: "minimize"
+repeats: 1
+
+tuning:
+  strategy: "grid"
+  # НОВОЕ: Префикс для изоляции результатов в CSV и папках
+  run_prefix: "stress-"
+
+# 3. Fixed Context (Known Best Parameters + NEW Time Limit)
+context:
+  solver.max_time_in_seconds: 600 # УВЕЛИЧЕНО до 10 минут
+  solver.random_seed: 42
+  solver.num_workers: 8
+  buffer: 0.25
+
+  # Фиксируем параметры, найденные на предыдущем прогоне
+  activation_penalty: 1
+  solver.search_branching: "PORTFOLIO"
+
+# 4. Focused Grid (Только 3 неопределенных флага)
+model:
+  grid: {}
+    # Nothing here, all model parameters are fixed in 'context'
+
+solver:
+  grid:
+    # Флаги, которые могут зависеть от сложности модели
+    stop_after_first_solution: [false, true]
+    cp_model_presolve: [true, false]
+    linearization_level: [0, 1]

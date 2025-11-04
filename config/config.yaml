@@ -11,7 +11,7 @@ overtime_multiplier: 1.5
 buffer: 0.25               # 15 minutes between rooms for the same anesthesiologist
 utilization_target: 0.80
 enforce_surgery_duration_limit: true  # reject surgeries > shift_max
-activation_penalty: 1  # weight (penalty) added to the objective function for each active anesthesiologist; 0 disables this term
+activation_penalty: 1 # (OPTIMIZED) weight (penalty) added to the objective function for each active anesthesiologist; 0 disables this term
 
 
 # --- Timezone context for I/O parsing/formatting (IANA name) ---
@@ -39,11 +39,14 @@ metrics:
 
 # --- CP-SAT solver parameters (names align with CpSolverParameters) ---
 solver:
-  search_branching: "AUTOMATIC"     # e.g., AUTOMATIC | PORTFOLIO | FIXED_SEARCH
+  search_branching: "PORTFOLIO"     # (OPTIMIZED) Search strategy
   num_workers: 8                    # 0/absent => solver decides; >=1 to pin
   max_time_in_seconds: 60
   random_seed: 42
   log_to_stdout: true               # emit solver log to stdout
+  stop_after_first_solution: false   # (OPTIMIZED) Stop immediately after first feasible solution
+  cp_model_presolve: true          # (OPTIMIZED) Disable presolver before search
+  linearization_level: 1            # (OPTIMIZED) Level of linearization: 0 = off
 
 # --- Reproducibility metadata (optional) ---
 experiment:

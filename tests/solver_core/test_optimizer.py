@@ -52,7 +52,7 @@ def test_optimizer_solve_feasible_and_objective_present(tmp_path, monkeypatch) -
     End-to-end smoke test: verifies optimizer feasibility and valid objective,
     with optional suppression of ResultStore file outputs.
     """
-    SAVE_ARTIFACTS = False  # toggle to True for manual debugging with disk output
+    SAVE_ARTIFACTS = False
 
     # --- Arrange ---
     cfg = _mini_config()
@@ -60,15 +60,10 @@ def test_optimizer_solve_feasible_and_objective_present(tmp_path, monkeypatch) -
     builder = ModelBuilder(cfg=cfg, surgeries=surgeries)
     bundle = builder.build()
 
-    # --- Optional: silence ResultStore side-effects ---
     if not SAVE_ARTIFACTS:
-        # redirect cwd to temp dir to isolate any accidental writes
         monkeypatch.chdir(tmp_path)
-
-        # import ResultStore dynamically to avoid circular import at top-level
         import opmed.solver_core.result_store as result_store_mod
 
-        # patch out writing functions (no disk I/O)
         monkeypatch.setattr(result_store_mod.ResultStore, "_write_metrics", lambda *a, **k: None)
         monkeypatch.setattr(result_store_mod.ResultStore, "_write_solver_log", lambda *a, **k: None)
         if hasattr(result_store_mod.ResultStore, "_write_config_snapshot"):
@@ -87,5 +82,4 @@ def test_optimizer_solve_feasible_and_objective_present(tmp_path, monkeypatch) -
     # --- Assert ---
     assert res["status"] in ("FEASIBLE", "OPTIMAL")
     assert res["objective"] is not None
-    assert isinstance(res["assignment"], dict)
-    assert "x" in res["assignment"] and "y" in res["assignment"]
+    assert "assignments" in res

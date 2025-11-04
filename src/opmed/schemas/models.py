@@ -1,15 +1,17 @@
 # src/opmed/schemas/models.py
 """
-Pydantic data models for Opmed optimization project.
+@brief
+Pydantic data models for the Opmed optimization project.
 
-This module defines three canonical models:
-- Surgery:      one input surgery record (from surgeries.csv)
-- Config:       runtime configuration (from config.yaml), including nested SolverConfig
-- SolutionRow:  one output row (for solution.csv)
+@details
+Defines three canonical model types:
+    - Surgery: represents a single input surgery record (from surgeries.csv)
+    - Config: runtime configuration (from config.yaml), including nested SolverConfig
+    - SolutionRow: represents one output record (for solution.csv)
 
-Models follow the field names and types specified in docs/schemas.md.
-They are intentionally lightweight (no heavy validators) to serve as a stable source
-for JSON Schema generation via .model_json_schema().
+Models strictly follow the field names and types specified in docs/schemas.md.
+They remain intentionally lightweight — no heavy validators — to ensure stable
+JSON Schema generation via `.model_json_schema()`.
 """
 
 from __future__ import annotations
@@ -20,25 +22,38 @@ from pydantic import BaseModel, Field
 
 
 class _StrictBaseModel(BaseModel):
-    """Base model with strict-ish defaults suitable for config/data contracts."""
+    """
+    @brief
+    Base model enforcing strict defaults for configuration and data contracts.
+
+    @details
+    Forbids unknown fields and preserves exact naming rules.
+    Designed as a foundation for all other Opmed models.
+    """
 
     model_config = {
         "extra": "forbid",  # Reject unknown fields
-        "populate_by_name": True,  # Allow population by field_name
+        "populate_by_name": True,  # Allow population by field name
         "use_enum_values": True,  # Export raw enum values if enums appear later
     }
 
 
 class Surgery(_StrictBaseModel):
     """
-    Represents a single surgery entry from surgeries.csv.
+    @brief
+    Represents one surgery record from surgeries.csv.
 
-    Fields:
-        surgery_id: Unique identifier of the surgery.
-        start_time: Surgery start time (ISO-8601, expected UTC unless Config.timezone provided).
-        end_time:   Surgery end time   (ISO-8601, expected UTC unless Config.timezone provided).
-        duration:   Optional duration in hours; may be computed as (end_time – start_time).
-        room_id:  Optional preferred operating-room label.
+    @details
+    Contains start/end timestamps and optional duration and room ID.
+    Intended for pre-validation and schedule generation steps.
+
+    @params
+        surgery_id : str
+            Unique identifier of the surgery.
+        start_time : datetime
+            Surgery start time (ISO-8601 UTC unless Config.timezone provided).
+        end_time : datetime
+            Surgery end time (ISO-8601 UTC unless Config.timezone provided).
     """
 
     surgery_id: str = Field(..., description="Unique identifier")
@@ -51,7 +66,12 @@ class Surgery(_StrictBaseModel):
 # ------------------------------------------------------------
 class IOPolicy(BaseModel):
     """
-    Runtime behavior controls for artifact and log writing.
+    @brief
+    Controls runtime behavior for artifact and log writing.
+
+    @details
+    Used by orchestrator and ResultStore to determine whether to
+    write metrics, configuration snapshots, and solver logs.
     """
 
     write_artifacts: bool = Field(
@@ -66,10 +86,13 @@ class IOPolicy(BaseModel):
 
 class SolverConfig(_StrictBaseModel):
     """
-    Full CP-SAT solver configuration (compatible with tuning interface 3.2.10).
+    @brief
+    Complete CP-SAT solver configuration.
 
+    @details
+    Compatible with tuning interface v3.2.10.
     Covers both production parameters and all hyperparameters used for tuning.
-    Default values are chosen for safe, reproducible production runs.
+    Default values are chosen for stable and reproducible runs.
     """
 
     # --- Basic controls ---
@@ -131,7 +154,13 @@ class SolverConfig(_StrictBaseModel):
 
 
 class VisualConfig(BaseModel):
-    """Visualization parameters for plot rendering."""
+    """
+    @brief
+    Visualization parameters for plot rendering.
+
+    @details
+    Defines figure dimensions and DPI for matplotlib visualizations.
+    """
 
     width: float = Field(19.0, description="Figure width in inches")
     height: float = Field(10.0, description="Figure height in inches")
@@ -139,29 +168,67 @@ class VisualConfig(BaseModel):
 
 
 class ExperimentConfig(BaseModel):
+    """
+    @brief
+    Metadata describing the experiment or run context.
+
+    @details
+    Used for tagging, naming, and describing experiments.
+    """
+
     name: str | None = None
     description: str | None = None
     tags: list[str] | None = None
 
 
 class ValidationConfig(BaseModel):
+    """
+    @brief
+    Controls behavior of validation subsystem.
+
+    @details
+    Determines whether to generate a report and whether warnings
+    should be treated as failures.
+    """
+
     write_report: bool = True
     fail_on_warnings: bool = False
 
 
 class MetricsConfig(BaseModel):
+    """
+    @brief
+    Controls metrics persistence.
+
+    @details
+    Flags for saving metrics.json and solver logs.
+    """
+
     save_metrics: bool = True
     save_solver_log: bool = True
 
 
 class VisualizationConfig(BaseModel):
+    """
+    @brief
+    Visualization output configuration.
+
+    @details
+    Controls figure saving and rendering quality.
+    """
+
     save_plot: bool = True
     dpi: int = 120
 
 
 class Config(_StrictBaseModel):
     """
-    Runtime configuration loaded from config.yaml.
+    @brief
+    Represents the full runtime configuration loaded from config.yaml.
+
+    @details
+    Combines solver, visualization, validation, and experiment settings.
+    Provides all parameters necessary for reproducible optimization runs.
     """
 
     time_unit: float = Field(0.0833, gt=0.0, description="Tick size in hours (5 min = 1/12 h)")
@@ -193,7 +260,7 @@ class Config(_StrictBaseModel):
     solver: SolverConfig = Field(default_factory=SolverConfig.model_construct)
     visual: VisualConfig = Field(default_factory=VisualConfig.model_construct)
 
-    # --- новые поля для поддержки YAML ---
+    # --- additional fields for YAML support ---
     surgeries_csv: str | None = None
     output_dir: str | None = "data/output"
     io_policy: IOPolicy = Field(default_factory=IOPolicy.model_construct)
@@ -205,7 +272,12 @@ class Config(_StrictBaseModel):
 
 class SolutionRow(_StrictBaseModel):
     """
+    @brief
     Represents one record in solution.csv.
+
+    @details
+    Defines the output schedule assignment for a single surgery,
+    including anesthetist and room allocation.
     """
 
     surgery_id: str = Field(..., description="Surgery identifier (must exist in input)")

@@ -498,31 +498,29 @@ class ModelBuilder:
         """
         @brief
         Enforces safety buffers between surgeries assigned to the same anesthesiologist
-        but occurring in different rooms too close in time. (Optimized version)
+        but located in different rooms too close in time. (Optimized version)
 
         @details
         Logical rule implemented:
             For each pair of surgeries (s1, s2) such that
                 s1.end ≤ s2.start < s1.end + BUFFER,
-            we enforce:
+            enforce:
                 (x[s1,a] ∧ x[s2,a]) → same_room(s1, s2)
 
-        This version is optimized to avoid a combinatorial explosion of constraints.
-        The "same_room" property (Boolean B) is pre-calculated once per
-        surgery pair, instead of N_anesthesiologists times.
+        This optimized variant prevents combinatorial explosion.
+        The "same_room" Boolean is computed once per surgery pair, not per anesthesiologist.
         """
 
-        # (1) Retrieve timing parameters and model constants
+        # (1) Retrieve timing parameters and constants
         buffer_ticks = self.aux["buffer_ticks"]
         max_anesth = len(self.surgeries)
         num_rooms = self.cfg.rooms_max
 
-        # (2) We need start/end ticks, which are already in self.aux
-        #     (No need to recalculate them as they were stored by _create_intervals)
+        # (2) Access precomputed start/end ticks from self.aux
         start_ticks = self.aux["start_ticks"]
         end_ticks = self.aux["end_ticks"]
 
-        # (3) Identify “dangerous” surgery pairs that violate buffer timing
+        # (3) Identify “dangerous” pairs violating the buffer time rule
         dangerous_pairs: list[tuple[int, int]] = []
         for s1_idx in range(len(self.surgeries)):
             for s2_idx in range(len(self.surgeries)):
@@ -543,20 +541,18 @@ class ModelBuilder:
             buffer_ticks,
         )
 
-        # [ --- НАЧАЛО ОПТИМИЗАЦИИ --- ]
-        # (4) Для каждой "опасной пары" СНАЧАЛА вычисляем "стикер" (b_same_room)
+        # (4) For each “dangerous pair” first compute the shared-room flag
         for s1, s2 in dangerous_pairs:
 
-            # --- "Менеджер клеит стикер" ---
-            # Boolean B: both surgeries share the same room
-            # Эта логика теперь выполняется ОДИН РАЗ для пары (s1, s2)
+            # --- Manager creates a “sticker” ---
+            # Boolean B: both surgeries share the same room.
             b_same_room = self.model.NewBoolVar(f"b_sameR_s{s1}_s{s2}")
             both_in_room_vars = []
 
             for r_idx in range(num_rooms):
                 b_both_in_r = self.model.NewBoolVar(f"b_both_r{r_idx}_s{s1}_s{s2}")
 
-                # Используем AddBoolAnd, который проще, чем две отдельные импликации
+                # Use AddBoolAnd for logical conjunction instead of separate implications
                 self.model.AddBoolAnd(
                     [self.vars["y"][(s1, r_idx)], self.vars["y"][(s2, r_idx)]]
                 ).OnlyEnforceIf(b_both_in_r)
@@ -566,29 +562,24 @@ class ModelBuilder:
 
                 both_in_room_vars.append(b_both_in_r)
 
-            # Aggregate “same room” condition (если они вместе хотя бы в одной комнате)
+            # Aggregate “same room” condition
             self.model.AddBoolOr(both_in_room_vars).OnlyEnforceIf(b_same_room)
-            # Если `both_in_room_vars` пуст (ни одной общей), b_same_room будет False
             self.model.Add(sum(both_in_room_vars) == 0).OnlyEnforceIf(b_same_room.Not())
 
-            # (5) Теперь итерируем по анестезиологам и применяем ПРОСТОЕ правило
+            # (5) Iterate over anesthesiologists and apply the implication rule
             for a_idx in range(max_anesth):
 
-                # --- "Менеджер проверяет сотрудника" ---
+                # --- Manager checks the employee ---
                 # Boolean A: both surgeries assigned to the same anesthesiologist
-                # Мы можем не создавать b_same_anesth, а использовать AddImplication
                 b_same_anesth_lit = self.model.NewBoolVar(f"b_sameA_lit_a{a_idx}_s{s1}_s{s2}")
                 self.model.AddBoolAnd(
                     [self.vars["x"][(s1, a_idx)], self.vars["x"][(s2, a_idx)]]
                 ).OnlyEnforceIf(b_same_anesth_lit)
-                # (Обратная импликация не нужна, т.к. нас интересует только направление A -> B)
 
                 # (6) Core logical rule: if same anesth (A) → must share same room (B)
-                # self.model.Add(b_same_anesth <= b_same_room) # Старый вариант
                 self.model.AddImplication(b_same_anesth_lit, b_same_room)
-        # [ --- КОНЕЦ ОПТИМИЗАЦИИ --- ]
 
-        # (7) Log how many buffer rules were created
+        # (7) Log summary
         logger.debug(
             "Added OPTIMIZED buffer consistency rules for %d pairs",
             len(dangerous_pairs),
@@ -596,14 +587,16 @@ class ModelBuilder:
 
     def _add_shift_duration_bounds(self) -> None:
         """
+        @brief
         Adds lower and upper bounds on anesthesiologists’ working shifts.
 
+        @details
         Uses AddMinEquality / AddMaxEquality so that t_min[a] and t_max[a]
-        represent the true earliest and latest assigned surgeries.
+        reflect the earliest and latest assigned surgeries.
         """
 
+        # (1) Compute shift duration parameters in ticks
         ticks_per_hour = int(round(1 / self.cfg.time_unit))
-        # shift_min = int(round(self.cfg.shift_min * ticks_per_hour))
         shift_max = int(round(self.cfg.shift_max * ticks_per_hour))
         max_anesth = len(self.surgeries)
 
@@ -615,6 +608,7 @@ class ModelBuilder:
         self.vars["t_max"] = {}
         self.vars["active"] = {}
 
+        # (2) Create variables and constraints per anesthesiologist
         for a_idx in range(max_anesth):
             t_min = self.model.NewIntVar(0, horizon, f"tmin_a{a_idx}")
             t_max = self.model.NewIntVar(0, horizon, f"tmax_a{a_idx}")
@@ -624,19 +618,17 @@ class ModelBuilder:
             self.vars["t_max"][a_idx] = t_max
             self.vars["active"][a_idx] = active
 
-            # Определяем активность
+            # (3) Determine active status via assigned surgeries
             x_vars = [self.vars["x"][(s_idx, a_idx)] for s_idx in range(len(self.surgeries))]
             self.model.AddBoolOr(x_vars).OnlyEnforceIf(active)
             for x in x_vars:
                 self.model.Add(x == 0).OnlyEnforceIf(active.Not())
                 self.model.AddImplication(x, active)
 
-            # --- Новая логика экстремумов ---
-            # Для каждого анестезиолога вычисляем t_min/t_max по назначенным операциям
+            # (4) Compute t_min/t_max proxies using assigned intervals
             start_candidates = []
             end_candidates = []
             for s_idx in range(len(self.surgeries)):
-                # Опциональные интервалы начала и конца
                 start_var = self.model.NewIntVar(0, horizon, f"start_a{a_idx}_s{s_idx}")
                 end_var = self.model.NewIntVar(0, horizon, f"end_a{a_idx}_s{s_idx}")
                 self.model.Add(start_var == start_ticks[s_idx]).OnlyEnforceIf(
@@ -652,25 +644,18 @@ class ModelBuilder:
                 start_candidates.append(start_var)
                 end_candidates.append(end_var)
 
-            # [НАЧАЛО ИСПРАВЛЕНИЯ]
-            # Нельзя применять .OnlyEnforceIf к AddMin/MaxEquality.
-            # Вместо этого мы используем "прокси" переменные.
-
-            # Шаг 1: Создаем прокси-переменные, которые БЕЗУСЛОВНО вычисляют min/max
+            # Cannot apply .OnlyEnforceIf to AddMin/MaxEquality.
+            # Proxy variables ensure unconditional equality.
             t_min_active = self.model.NewIntVar(0, horizon, f"tmin_active_a{a_idx}")
             t_max_active = self.model.NewIntVar(0, horizon, f"tmax_active_a{a_idx}")
 
             self.model.AddMinEquality(t_min_active, start_candidates)
             self.model.AddMaxEquality(t_max_active, end_candidates)
 
-            # Шаг 2: Применяем условную логику к ПРОСТЫМ операциям, которые поддерживаются
             self.model.Add(t_min == t_min_active).OnlyEnforceIf(active)
             self.model.Add(t_max == t_max_active).OnlyEnforceIf(active)
-            # [КОНЕЦ ИСПРАВЛЕНИЯ]
-            # --- Конец новой логики ---
 
-            # Ограничение длительности смены
-            # self.model.Add(t_max - t_min >= shift_min).OnlyEnforceIf(active)
+            # (5) Enforce shift duration bounds
             self.model.Add(t_max - t_min <= shift_max).OnlyEnforceIf(active)
 
             self.model.Add(t_min == 0).OnlyEnforceIf(active.Not())
@@ -692,80 +677,58 @@ class ModelBuilder:
         and sets it as the model’s objective to minimize total workload cost.
 
         @details
-        Each anesthesiologist `a` has a shift duration defined as `(t_max[a] - t_min[a])`.
-        The cost function models realistic pay and efficiency penalties:
-            cost[a] = max(SHIFT_MIN, duration_a) + 0.5 * max(0, duration_a - SHIFT_OVERTIME)
-        which penalizes overtime at a rate 1.5× of the normal rate beyond `SHIFT_OVERTIME`.
+        Each anesthesiologist a has shift duration (t_max[a] - t_min[a]).
+        The cost models pay and overtime penalties:
+            cost[a] = max(SHIFT_MIN, duration) + 0.5 * max(0, duration - SHIFT_OVERTIME)
+        scaled by 2 to keep integer arithmetic.
 
-        To avoid fractional coefficients in CP-SAT (integer solver), the function is scaled by 2:
-            cost2[a] = 2 * base_part + overtime_part
-        where:
-            base_part = max(SHIFT_MIN, duration)
-            overtime_part = max(0, duration - SHIFT_OVERTIME)
-
-        The final objective is:
-            Minimize(Σ cost2[a])  — i.e., minimize total scaled shift cost.
-
-        For inactive anesthesiologists (active[a] = 0), the model enforces cost2[a] = 0.
-
-        @params
-            None (uses `self.vars`, `self.aux`, and `self.cfg`).
-
-        @returns
-            None. Adds cost variables and sets the model objective in-place.
+        For inactive anesthesiologists, cost2[a] = 0.
         """
 
-        # (1) Convert configuration parameters from hours to discrete time ticks
+        # (1) Convert config parameters from hours to ticks
         ticks_per_hour = int(round(1 / self.cfg.time_unit))
         shift_min = int(round(self.cfg.shift_min * ticks_per_hour))
         shift_overtime = int(round(self.cfg.shift_overtime * ticks_per_hour))
         max_anesth = len(self.surgeries)
         horizon = self.aux["max_time_ticks"]
 
-        # (2) Prepare variable storage for per-anesthesiologist costs
+        # (2) Initialize storage for cost variables
         self.vars.setdefault("cost", {})
         cost_terms: list[cp_model.IntVar] = []
 
-        # (3) Build cost expression for each anesthesiologist
+        # (3) Build cost structure per anesthesiologist
         for a_idx in range(max_anesth):
             t_min = self.vars["t_min"][a_idx]
             t_max = self.vars["t_max"][a_idx]
             active = self.vars["active"][a_idx]
 
-            # (3.1) Compute raw duration of anesthesiologist’s shift
+            # (3.1) Compute shift duration
             duration = self.model.NewIntVar(0, horizon, f"duration_a{a_idx}")
             self.model.Add(duration == t_max - t_min)
 
-            # (3.2) Base shift cost — at least SHIFT_MIN, even if duration is shorter
+            # (3.2) Base part: at least SHIFT_MIN
             base_part = self.model.NewIntVar(0, horizon, f"base_a{a_idx}")
             self.model.AddMaxEquality(base_part, [duration, shift_min])
 
-            # (3.3) Overtime cost — positive part of (duration - SHIFT_OVERTIME)
+            # (3.3) Overtime part: positive excess beyond SHIFT_OVERTIME
             ov_diff = self.model.NewIntVar(-horizon, horizon, f"ov_diff_a{a_idx}")
             self.model.Add(ov_diff == duration - shift_overtime)
             overtime_part = self.model.NewIntVar(0, horizon, f"overtime_a{a_idx}")
             self.model.AddMaxEquality(overtime_part, [ov_diff, 0])
 
-            # (3.4) Combine scaled cost: cost2 = 2*base_part + overtime_part
+            # (3.4) Combine scaled cost
             cost2 = self.model.NewIntVar(0, 3 * horizon, f"cost2_a{a_idx}")
-
-            # Conditional activation:
-            # if active[a]:   cost2 == 2*base_part + overtime_part
-            # else:           cost2 == 0
             self.model.Add(cost2 == 2 * base_part + overtime_part).OnlyEnforceIf(active)
             self.model.Add(cost2 == 0).OnlyEnforceIf(active.Not())
 
-            # (3.5) Store and register the cost variable
             self.vars["cost"][a_idx] = cost2
             cost_terms.append(cost2)
 
-        # (4) Define the global objective: minimize total scaled cost
-        # The scale factor (×2) does not affect optimality, only integer precision.
+        # (4) Define global objective
         activation_penalty: int = getattr(self.cfg, "activation_penalty", 0) or 0
-
-        # --- penalty for short shifts (< SHIFT_MIN) ---
         shortfall_penalty_coeff = int(round(activation_penalty / self.cfg.time_unit))
         shortfall_terms: list[cp_model.IntVar] = []
+
         for a_idx in range(max_anesth):
             active = self.vars["active"][a_idx]
             duration = self.model.NewIntVar(0, horizon, f"dur_copy_a{a_idx}")
@@ -777,11 +740,10 @@ class ModelBuilder:
             penalty_term = self.model.NewIntVar(
                 0, shift_min * shortfall_penalty_coeff, f"penalty_short_a{a_idx}"
             )
-            # Штраф начисляется, ТОЛЬКО ЕСЛИ анестезиолог АКТИВЕН
+            # Penalty applied only if anesthesiologist is active
             self.model.Add(penalty_term == shortfall * shortfall_penalty_coeff).OnlyEnforceIf(
                 active
             )
-            # Если неактивен, штраф = 0 (убираем баг, который приводил к INFEASIBLE)
             self.model.Add(penalty_term == 0).OnlyEnforceIf(active.Not())
             shortfall_terms.append(penalty_term)
 
@@ -792,9 +754,9 @@ class ModelBuilder:
         else:
             # Variant 2 — extended objective with activation and room penalties
             active_vars = list(self.vars.get("active", {}).values())
-
             num_rooms = self.cfg.rooms_max
             room_used_vars = []
+
             for r_idx in range(num_rooms):
                 b_room_used = self.model.NewBoolVar(f"room_used_r{r_idx}")
                 self.model.AddBoolOr(
@@ -815,13 +777,13 @@ class ModelBuilder:
 
             total_cost = (
                 sum(cost_terms)
-                + sum(shortfall_terms)  # new penalty for underfilled shifts
+                + sum(shortfall_terms)
                 + activation_penalty * sum(active_vars)
                 + activation_penalty * sum(room_used_vars)
             )
             self.model.Minimize(total_cost)
 
-        # (5) Log final confirmation for traceability
+        # (5) Log completion
         logger.debug(
             "Added piecewise cost objective for %d anesthesiologists (conditional on active)",
             max_anesth,

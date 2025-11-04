@@ -21,12 +21,16 @@ CpSatModelBundle = dict[str, Any]
 
 class ResultStore:
     """
-    Единая точка побочных эффектов (артефакты/логи).
-    Управляется конфигом:
-      io_policy.write_artifacts: bool (default True)
-      io_policy.write_solver_logs: bool (default False)
+    @brief
+    Central component responsible for handling all side effects (artifacts and logs).
 
-    Методы не знают бизнес-логики оптимизации — только запись.
+    @details
+    Controlled by configuration flags:
+        io_policy.write_artifacts : bool  (default True)
+        io_policy.write_solver_logs : bool  (default False)
+
+    The methods in this class contain no optimization logic — only persistence
+    of outputs, metrics, and diagnostic files.
     """
 
     def __init__(self, cfg: Config) -> None:

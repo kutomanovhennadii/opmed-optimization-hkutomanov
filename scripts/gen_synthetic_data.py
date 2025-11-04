@@ -31,8 +31,8 @@ Edit the constants in the "CONFIG" section to produce different datasets
 # =========================
 # CONFIG — EDIT THESE
 # =========================
-ROOMS: int = 1  # number of operating rooms (>= 1)
-DAYS: int = 1  # horizon length in whole days (>= 1)
+ROOMS: int = 16  # number of operating rooms (>= 1)
+DAYS: int = 3  # horizon length in whole days (>= 1)
 OUTPUT: str = f"data/input/synthetic_{DAYS}d_{ROOMS}r.csv"  # output CSV path
 
 # Duration and gap constraints (minutes), all must be multiples of TICK_MINUTES

@@ -11,11 +11,7 @@ import pandas as pd
 import pytest
 
 from opmed.errors import DataError, VisualizationError
-
-# Доменные модели/ошибки
 from opmed.schemas.models import Config, SolutionRow
-
-# Модуль под тестом
 from opmed.visualizer.plot import plot_schedule
 
 
