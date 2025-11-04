@@ -9,6 +9,7 @@ import sys
 import time
 import traceback
 from collections.abc import Sequence
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -21,7 +22,6 @@ from opmed.errors import ConfigError, DataError, OpmedError, ValidationError  # 
 from opmed.export.solution_export import write_solution_csv
 from opmed.metrics.logger import write_metrics, write_solver_log
 from opmed.metrics.metrics import collect_metrics
-from opmed.schemas.models import SolutionRow
 from opmed.solver_core.model_builder import ModelBuilder
 from opmed.solver_core.optimizer import Optimizer
 from opmed.validator import validate_assignments
@@ -85,53 +85,63 @@ def _parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def _rename_anesthetists(assignments: Sequence[SolutionRow]) -> list[SolutionRow]:
+def _rename_anesthetists(assignments: Sequence[dict[str, Any]]) -> list[dict[str, Any]]:
     """
     @brief
-    Sorts assignments chronologically and renames anesthetist_id sequentially (A001, A002, ...).
+    Renames anesthetists sequentially based on their first appearance in time order.
 
     @details
-    Takes a sequence of SolutionRow objects and sorts them in ascending order by 'start_time'.
-    Builds a mapping of original anesthetist identifiers to standardized sequential IDs
-    (A001, A002, A003, ...), reflecting the chronological order of operations.
-    Returns a new sorted list with updated anesthetist_id values.
-
-    @params
-        assignments : Sequence[SolutionRow]
-            List or sequence of SolutionRow objects representing scheduled surgeries.
-
-    @returns
-        A new list of SolutionRow objects sorted by start_time and renamed according to
-        their chronological order.
+    Sorts surgeries by start_time, assigns new anesthetist IDs in the order
+    they first appear (A001, A002, ...), and returns the final list
+    sorted by surgery_id for deterministic output.
     """
+    # (0) Early exit for empty input
     if not assignments:
         return []
 
-    # (1) Sort a copy of the list by start time (ascending)
-    sorted_assignments = sorted(assignments, key=lambda a: a.start_time)
+    def _to_utc_dt(ts: Any) -> datetime:
+        """
+        @brief
+        Converts timestamp into timezone-aware UTC datetime.
 
-    # (2) Collect unique old IDs in chronological order
-    old_ids_in_order: list[str] = []
-    seen_ids: set[str] = set()
-    for row in sorted_assignments:
-        old_id = row.anesthetist_id
-        if not isinstance(old_id, str):
-            old_id = str(old_id)
-        if old_id not in seen_ids:
-            seen_ids.add(old_id)
-            old_ids_in_order.append(old_id)
+        @details
+        Supports both string and datetime inputs. Normalizes all timestamps
+        to UTC for consistent ordering.
+        """
+        if isinstance(ts, str):
+            s = ts.replace("Z", "+00:00")
+            dt = datetime.fromisoformat(s)
+        else:
+            dt = ts
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        else:
+            dt = dt.astimezone(timezone.utc)
+        return dt
 
-    # (3) Build mapping old → standardized sequential IDs
-    id_mapping: dict[str, str] = {
-        old_id: f"A{i + 1:03d}" for i, old_id in enumerate(old_ids_in_order)
-    }
+    # (1) Sort rows by surgery start time
+    sorted_rows = sorted(assignments, key=lambda r: _to_utc_dt(r["start_time"]))
 
-    # (4) Apply mapping to the sorted list (creates renamed records)
-    for row in sorted_assignments:
-        key = str(row.anesthetist_id)
-        row.anesthetist_id = id_mapping[key]
+    # (2) Build mapping from old anesthetist_id → new anesthetist_id
+    id_map: dict[str, str] = {}
+    next_id = 1
+    for row in sorted_rows:
+        old = str(row["anesthetist_id"])
+        if old not in id_map:
+            id_map[old] = f"A{next_id:03d}"
+            next_id += 1
 
-    return sorted_assignments
+    # (3) Apply renaming map to all records
+    renamed_rows: list[dict[str, Any]] = []
+    for row in sorted_rows:
+        new_row = dict(row)
+        new_row["anesthetist_id"] = id_map[str(row["anesthetist_id"])]
+        renamed_rows.append(new_row)
+
+    # (4) Final sort by surgery_id for deterministic order
+    renamed_rows = sorted(renamed_rows, key=lambda r: r["surgery_id"])
+
+    return renamed_rows
 
 
 def run_pipeline(config_path: Path, input_path: Path, output_dir: Path) -> dict[str, Any]:
@@ -238,6 +248,7 @@ def run_pipeline(config_path: Path, input_path: Path, output_dir: Path) -> dict[
 
     # (6) Normalize assignments and replace anesthetist IDs
     assignments_raw = res.get("assignments")
+    assignments_dicts: list[dict[str, Any]] = []
     if assignments_raw:
         if not isinstance(assignments_raw, list) or (
             assignments_raw and not isinstance(assignments_raw[0], dict)
@@ -249,10 +260,10 @@ def run_pipeline(config_path: Path, input_path: Path, output_dir: Path) -> dict[
         else:
             assignments_dicts = assignments_raw
 
-        assignments_for_std = copy.deepcopy(assignments_dicts)
-        logging.info("Standardizing Anesthetist IDs (A001, A002, ...) for all artifacts.")
-        _rename_anesthetists(assignments_for_std)
-        res["assignments"] = assignments_for_std
+    assignments_for_std = copy.deepcopy(assignments_dicts)
+    logging.info("Standardizing Anesthetist IDs (A001, A002, ...) for all artifacts.")
+    assignments_std = _rename_anesthetists(assignments_for_std)
+    res["assignments"] = assignments_std
 
     # (7) Visualization step (only for valid solutions)
     plot_path: Path | None = None

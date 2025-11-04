@@ -56,15 +56,16 @@ def _iso(dt: datetime) -> str:
 # --- Positive cases -----------------------------------------------------------
 
 
-def test_write_solution_csv_happy_path_list(tmp_path: Path) -> None:
+def test_write_solution_csv_preserves_input_order(tmp_path: Path) -> None:
     """
     @brief
-    Verifies successful export for a valid list of assignment records.
+    Verifies that write_solution_csv() preserves the input order of assignments.
 
     @details
-    Simulates two surgeries assigned to the same anesthetist in chronological
-    order. Ensures CSV is created, header matches specification, and rows are
-    sorted by anesthetist_id then start_time with ISO-8601 UTC timestamps.
+    Previously the exporter re-sorted rows by anesthetist_id and start_time.
+    After refactoring, the function must now write records in the exact order
+    provided by the caller (typically after _rename_anesthetists), ensuring
+    deterministic output consistent with the upstream pipeline.
     """
     # --- Arrange ---
     out = tmp_path / "solution.csv"
@@ -74,6 +75,7 @@ def test_write_solution_csv_happy_path_list(tmp_path: Path) -> None:
     t2 = t1 + timedelta(minutes=30)
     t3 = t2 + timedelta(hours=1, minutes=30)
 
+    # Note: Intentionally reversed chronological order to verify preservation
     assignments = [
         {
             "surgery_id": "S002",
@@ -95,12 +97,12 @@ def test_write_solution_csv_happy_path_list(tmp_path: Path) -> None:
     out_path = write_solution_csv(assignments, out)
 
     # --- Assert ---
-    # Verify output file was written successfully
     assert out_path == out
     assert out.exists()
 
-    # Reload to verify column order and content
     rows = _read_csv(out)
+
+    # Header order must follow specification
     assert [c for c in rows[0].keys()] == [
         "surgery_id",
         "start_time",
@@ -109,8 +111,8 @@ def test_write_solution_csv_happy_path_list(tmp_path: Path) -> None:
         "room_id",
     ], "Header/columns order must match spec"
 
-    # Sorted by anesthetist_id then start_time
-    assert [r["surgery_id"] for r in rows] == ["S001", "S002"]
+    # Verify order is preserved (no re-sorting inside write_solution_csv)
+    assert [r["surgery_id"] for r in rows] == ["S002", "S001"]
 
     # ISO strings must include timezone information
     assert rows[0]["start_time"].endswith("+00:00")

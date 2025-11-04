@@ -4,7 +4,6 @@ from pathlib import Path
 
 import pytest
 
-from opmed.schemas.models import SolutionRow
 from scripts.run import _rename_anesthetists, run_pipeline
 
 
@@ -153,15 +152,27 @@ def test_rename_anesthetists_basic_ordering_on_models():
 
     # --- Arrange ---
     rows = [
-        SolutionRow(
-            surgery_id="s2", start_time=_dt(10), end_time=_dt(11), anesthetist_id="B", room_id="R2"
-        ),
-        SolutionRow(
-            surgery_id="s1", start_time=_dt(8), end_time=_dt(9), anesthetist_id="A", room_id="R1"
-        ),
-        SolutionRow(
-            surgery_id="s3", start_time=_dt(12), end_time=_dt(13), anesthetist_id="C", room_id="R3"
-        ),
+        {
+            "surgery_id": "s2",
+            "start_time": _dt(10),
+            "end_time": _dt(11),
+            "anesthetist_id": "B",
+            "room_id": "R2",
+        },
+        {
+            "surgery_id": "s1",
+            "start_time": _dt(8),
+            "end_time": _dt(9),
+            "anesthetist_id": "A",
+            "room_id": "R1",
+        },
+        {
+            "surgery_id": "s3",
+            "start_time": _dt(12),
+            "end_time": _dt(13),
+            "anesthetist_id": "C",
+            "room_id": "R3",
+        },
     ]
 
     # --- Act ---
@@ -169,8 +180,8 @@ def test_rename_anesthetists_basic_ordering_on_models():
 
     # --- Assert ---
     # Verify chronological ordering and correct ID reassignment
-    assert [r.surgery_id for r in out] == ["s1", "s2", "s3"]
-    assert [r.anesthetist_id for r in out] == ["A001", "A002", "A003"]
+    assert [r["surgery_id"] for r in out] == ["s1", "s2", "s3"]
+    assert [r["anesthetist_id"] for r in out] == ["A001", "A002", "A003"]
 
 
 def test_rename_anesthetists_repeated_ids_on_models():
@@ -185,22 +196,34 @@ def test_rename_anesthetists_repeated_ids_on_models():
 
     # --- Arrange ---
     rows = [
-        SolutionRow(
-            surgery_id="s1", start_time=_dt(9), end_time=_dt(10), anesthetist_id="X", room_id="R1"
-        ),
-        SolutionRow(
-            surgery_id="s2", start_time=_dt(11), end_time=_dt(12), anesthetist_id="X", room_id="R2"
-        ),
-        SolutionRow(
-            surgery_id="s3", start_time=_dt(13), end_time=_dt(14), anesthetist_id="Y", room_id="R3"
-        ),
+        {
+            "surgery_id": "s1",
+            "start_time": _dt(9),
+            "end_time": _dt(10),
+            "anesthetist_id": "X",
+            "room_id": "R1",
+        },
+        {
+            "surgery_id": "s2",
+            "start_time": _dt(11),
+            "end_time": _dt(12),
+            "anesthetist_id": "X",
+            "room_id": "R2",
+        },
+        {
+            "surgery_id": "s3",
+            "start_time": _dt(13),
+            "end_time": _dt(14),
+            "anesthetist_id": "Y",
+            "room_id": "R3",
+        },
     ]
 
     # --- Act ---
     out = _rename_anesthetists(rows)
 
     # --- Assert ---
-    ids = [r.anesthetist_id for r in out]
+    ids = [r["anesthetist_id"] for r in out]
     assert ids.count("A001") == 2
     assert "A002" in ids
     assert set(ids) <= {"A001", "A002"}

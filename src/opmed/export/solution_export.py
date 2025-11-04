@@ -269,7 +269,7 @@ def write_solution_csv(assignments: Any, out_path: Path) -> Path:
         )
 
     # (5) Sort rows by anesthetist_id and start_time
-    normalized.sort(key=lambda r: (r["anesthetist_id"], r["start_time"]))
+    # normalized.sort(key=lambda r: (r["anesthetist_id"], r["start_time"]))
 
     # (6) Ensure output directory exists
     out_dir = out_path.parent

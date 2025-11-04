@@ -61,13 +61,10 @@ def plot_day_schedule(schedule: pd.DataFrame) -> None:
     resources = sorted(resources_set, key=lambda x: (len(x), x), reverse=True)
     resource_mapping = {resource: i for i, resource in enumerate(resources)}
 
-    # (3) Compute time intervals in hours from start of day
-    intervals_start = (
-        (schedule.start_time - schedule.start_time.dt.floor("d")).dt.total_seconds().div(3600)
-    )
-    intervals_end = (
-        (schedule.end_time - schedule.start_time.dt.floor("d")).dt.total_seconds().div(3600)
-    )
+    # (3) Compute time intervals in hours from earliest timestamp (continuous timeline)
+    t0 = schedule["start_time"].min()
+    intervals_start = (schedule["start_time"] - t0).dt.total_seconds().div(3600)
+    intervals_end = (schedule["end_time"] - t0).dt.total_seconds().div(3600)
     intervals = list(zip(intervals_start, intervals_end))
 
     # (4) Build color palette per room_id
@@ -75,11 +72,11 @@ def plot_day_schedule(schedule: pd.DataFrame) -> None:
     palette = [(c[0] * 0.9, c[1] * 0.9, c[2] * 0.9) for c in palette]
     cases_colors = {case_id: palette[i] for i, case_id in enumerate(set(schedule["room_id"]))}
 
-    # (5) Draw horizontal bars for each assignment
-    for i, (room_id, anesthetist, evt) in enumerate(
-        zip(schedule["room_id"], schedule["anesthetist_id"], intervals)
+    # (5) Draw horizontal bars for each assignment (label = surgery_id)
+    for room_id, anesthetist, evt, sid in zip(
+        schedule["room_id"], schedule["anesthetist_id"], intervals, schedule["surgery_id"]
     ):
-        txt_to_print = str(i)
+        label = str(sid)
         ax.barh(
             resource_mapping[anesthetist],
             width=evt[1] - evt[0],
@@ -88,14 +85,18 @@ def plot_day_schedule(schedule: pd.DataFrame) -> None:
             edgecolor="black",
             color=cases_colors[room_id],
         )
-        ax.text(
-            (evt[0] + evt[1] - 0.07 * len(txt_to_print)) / 2,
-            resource_mapping[anesthetist],
-            txt_to_print,
-            name="Arial",
-            color="white",
-            va="center",
-        )
+        try:
+            ax.text(
+                (evt[0] + evt[1]) / 2,
+                resource_mapping[anesthetist],
+                label,
+                color="black",
+                va="center",
+                ha="center",
+                fontsize=8,
+            )
+        except Exception as e:
+            print(f"skip label {label}: {e}")
 
     # (6) Configure axes and labels
     ax.set_yticks(range(len(resources)))
